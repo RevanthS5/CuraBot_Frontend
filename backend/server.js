@@ -1,5 +1,6 @@
 const express = require("express");
 const dotenv = require("dotenv");
+const cors = require("cors");
 const path = require("path");
 const connectDB = require("./config/db");
 
@@ -8,17 +9,20 @@ dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 // Initialize Express
 const app = express();
+app.use(express.json());
+app.use(cors());
 
 // Connect to Database
 connectDB();
 
-console.log("✅ MongoDB connection established");
+// Load Routes
+app.use("/api/auth", require("./routes/authRoutes"));
 
-// Default Route (AFTER app initialization)
+// Default Route
 app.get("/", (req, res) => {
-    res.send("CuraBot Backend is Running on nodemon!");
+  res.send("CuraBot Backend is Running using env!");
 });
 
 // Start Server
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT ;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
