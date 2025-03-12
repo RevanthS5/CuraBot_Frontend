@@ -18,26 +18,26 @@ const registerUser = async (req, res) => {
             return res.status(400).json({ message: "User already exists" });
         }
 
-        // 🔑 Generate a salt for PBKDF2
+        // 🏆 Generate a salt and hash the password using PBKDF2
         const salt = crypto.randomBytes(16).toString("hex");
-
-        // 🔐 Hash the password using PBKDF2
         const hashedPassword = crypto.pbkdf2Sync(password, salt, 1000, 64, "sha512").toString("hex");
 
         console.log("🔒 PBKDF2 Hashed Password:", hashedPassword);
 
-        // 📝 Store the password as "salt:hash" for later verification
+        // ✅ Only allow role assignment if the user is an admin
+        const userRole = req.user?.role === "admin" ? role : "patient";
+
+        // 📝 Create new user
         const user = new User({
             name,
             email,
             phone,
             password: `${salt}:${hashedPassword}`,
-            role,
+            role: userRole,
         });
 
-        // 📌 Save user to database
         await user.save();
-        console.log("✅ User saved successfully!");
+        console.log("✅ User registered successfully!");
 
         // 🎟 Generate JWT Token
         const token = jwt.sign(

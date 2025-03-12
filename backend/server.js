@@ -16,7 +16,8 @@ app.use(cors());
 connectDB();
 
 // Load Routes
-app.use("/api/auth", require("./routes/authRoutes"));
+app.use("/api/auth", require("./routes/authRoutes")); // 🔥 Auth Routes
+app.use("/api/admin", require("./routes/adminRoutes")); // 🔥 Admin Routes
 
 // Default Route
 app.get("/", (req, res) => {

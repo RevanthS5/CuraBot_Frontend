@@ -5,7 +5,7 @@ const path = require("path");
 // ✅ Load .env from root directory
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
-// ✅ Middleware to Protect Routes
+// ✅ Middleware to Protect Routes (Authentication Check)
 const protect = (req, res, next) => {
   let token = req.headers.authorization;
 
@@ -14,10 +14,8 @@ const protect = (req, res, next) => {
   }
 
   try {
-    // 🔑 Extract token from "Bearer <token>"
+    // 🔑 Extract and verify token
     token = token.split(" ")[1];
-
-    // 🔍 Verify Token using JWT_SECRET
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     // 🛠 Attach User Data to Request
@@ -28,4 +26,14 @@ const protect = (req, res, next) => {
   }
 };
 
-module.exports = { protect };
+// ✅ Middleware for Role-Based Access Control
+const authorize = (...roles) => {
+  return (req, res, next) => {
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({ message: "Forbidden - Access Denied" });
+    }
+    next();
+  };
+};
+
+module.exports = { protect, authorize };
