@@ -18,7 +18,9 @@ connectDB();
 // Load Routes
 app.use("/api/auth", require("./routes/authRoutes")); // 🔥 Auth Routes
 app.use("/api/admin", require("./routes/adminRoutes")); // 🔥 Admin Routes
-app.use("/api/doctors", require("./routes/doctorRoutes")); // 🔥 Doctor routes
+app.use("/api/doctors", require("./routes/doctorRoutes")); // 🔥 Doctor Routes
+app.use("/api/schedule", require("./routes/scheduleRoutes")); // 🔥 Schedule appointment routes
+app.use("/api/appointments", require("./routes/appointmentRoutes")); // 🔥 All appointment routes
 
 // Default Route
 app.get("/", (req, res) => {
