@@ -18,6 +18,7 @@ connectDB();
 // Load Routes
 app.use("/api/auth", require("./routes/authRoutes")); // 🔥 Auth Routes
 app.use("/api/admin", require("./routes/adminRoutes")); // 🔥 Admin Routes
+app.use("/api/doctors", require("./routes/doctorRoutes")); // 🔥 Doctor routes
 
 // Default Route
 app.get("/", (req, res) => {
