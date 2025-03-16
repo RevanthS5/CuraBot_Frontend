@@ -5,10 +5,10 @@ const { bookAppointment, getAllAppointments, getPatientAppointments, cancelAppoi
 const router = express.Router();
 
 // ✅ Book an Appointment (Patient Only)
-router.post("/", protect, authorize("patient"), bookAppointment);
+router.post("/book", protect, authorize("patient"), bookAppointment);
 
 // ✅ Get All Appointments (Admin & Doctor)
-router.get("/", protect, authorize("admin", "doctor"), getAllAppointments);
+router.get("/all", protect, authorize("admin", "doctor"), getAllAppointments);
 
 // ✅ Get Patient's Appointments (Patient Only)
 router.get("/my", protect, authorize("patient"), getPatientAppointments);

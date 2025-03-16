@@ -9,7 +9,7 @@ try {
   groq = new Groq({
     apiKey: process.env.GROQ_API_KEY,
   });
-  console.log("✅ Groq client initialized successfully");
+  console.log("✅ Groq client initialized successfully for Chatbot");
 } catch (error) {
   console.error("❌ Failed to initialize Groq client:", error);
 }
