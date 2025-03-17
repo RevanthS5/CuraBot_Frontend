@@ -16,7 +16,7 @@ try {
     console.error("❌ Failed to initialize Groq client:", error);
 }
 
-// ✅ 1️⃣ Admin Dashboard (Overview of System Stats)
+// ✅ Admin Dashboard (Overview of System Stats)
 const getAdminDashboard = asyncHandler(async (req, res) => {
     try {
         const totalPatients = await User.countDocuments({ role: "patient" });
@@ -36,7 +36,7 @@ const getAdminDashboard = asyncHandler(async (req, res) => {
     }
 });
 
-// ✅ 2️⃣ Fetch All Patients
+// ✅ Fetch All Patients
 const getAllPatients = asyncHandler(async (req, res) => {
     try {
         const patients = await User.find({ role: "patient" }).select("-password");
@@ -47,7 +47,7 @@ const getAllPatients = asyncHandler(async (req, res) => {
     }
 });
 
-// ✅ 3️⃣ Fetch Doctor Schedule & Workload Insights
+// ✅ Fetch Doctor Schedule & Workload Insights
 const getDoctorSchedule = asyncHandler(async (req, res) => {
     try {
         const doctorId = req.params.doctorId;
@@ -68,7 +68,7 @@ const getDoctorSchedule = asyncHandler(async (req, res) => {
     }
 });
 
-// ✅ 4️⃣ Fetch All Appointments (For Admin Control)
+// ✅  Fetch All Appointments (For Admin Control)
 const getAllAppointments = asyncHandler(async (req, res) => {
     try {
         const appointments = await Appointment.find()
@@ -81,7 +81,7 @@ const getAllAppointments = asyncHandler(async (req, res) => {
     }
 });
 
-// ✅ 5️⃣ Reschedule or Cancel an Appointment (Admin Control)
+// ✅ Reschedule or Cancel an Appointment (Admin Control)
 const manageAppointments = asyncHandler(async (req, res) => {
     try {
         const { action, newDate, newTime } = req.body; // Action: "reschedule" or "cancel"
@@ -106,7 +106,7 @@ const manageAppointments = asyncHandler(async (req, res) => {
     }
 });
 
-// ✅ 6️⃣ Manually Book an Appointment (Admin-Only)
+// ✅ Manually Book an Appointment (Admin-Only)
 const manuallyScheduleAppointment = asyncHandler(async (req, res) => {
     try {
         const { patientId, doctorId, date, time } = req.body;

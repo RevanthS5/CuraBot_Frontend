@@ -1,3 +1,7 @@
+const asyncHandler = require("express-async-handler");
+const { Groq } = require("groq-sdk");
+const Appointment = require("../models/Appointment.js");
+const Chat = require("../models/Chat.js");
 const Doctor = require("../models/Doctor.js");
 const User = require("../models/User.js");
 
@@ -90,4 +94,105 @@ const deleteDoctor = async (req, res) => {
     }
 };
 
-module.exports = { addDoctor, getAllDoctors, getDoctorById, updateDoctor, deleteDoctor };
+// ✅ Initialize Groq Client
+let groq;
+try {
+    groq = new Groq({
+        apiKey: process.env.GROQ_API_KEY,
+    });
+    console.log("✅ Groq client initialized successfully for patient summary");
+} catch (error) {
+    console.error("❌ Failed to initialize Groq client:", error);
+}
+
+// ✅ Get Today’s Appointments for Doctor
+const getTodayAppointments = asyncHandler(async (req, res) => {
+    try {
+        const doctorId = req.user.id;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const appointments = await Appointment.find({
+            doctorId,
+            date: { $gte: today, $lt: new Date(today.getTime() + 86400000) }
+        })
+        .populate("patientId", "name email")
+        .sort({ time: 1 });
+
+        res.status(200).json(appointments);
+    } catch (error) {
+        console.error("Error fetching doctor's appointments:", error);
+        res.status(500).json({ message: "Server Error" });
+    }
+});
+
+// ✅ Get Appointments by Selected Date
+const getAppointmentsByDate = asyncHandler(async (req, res) => {
+    try {
+        const doctorId = req.user.id; 
+        const { date } = req.query;
+        
+        if (!date) return res.status(400).json({ message: "Date is required" });
+
+        const selectedDate = new Date(date);
+        selectedDate.setHours(0, 0, 0, 0);
+
+        const appointments = await Appointment.find({
+            doctorId,
+            date: { $gte: selectedDate, $lt: new Date(selectedDate.getTime() + 86400000) }
+        })
+        .populate("patientId", "name email")
+        .sort({ time: 1 });
+
+        res.status(200).json(appointments);
+    } catch (error) {
+        console.error("Error fetching doctor's appointments:", error);
+        res.status(500).json({ message: "Server Error" });
+    }
+});
+
+// ✅ AI-Generated Patient Summary
+const getPatientSummary = asyncHandler(async (req, res) => {
+    try {
+        const { appointmentId } = req.params;
+        
+        const appointment = await Appointment.findById(appointmentId).populate("patientId", "name email");
+        if (!appointment) return res.status(404).json({ message: "Appointment not found" });
+
+        const chatHistory = await Chat.findOne({ userId: appointment.patientId._id });
+        if (!chatHistory) return res.status(404).json({ message: "No chatbot history found for this patient" });
+
+        const prompt = `
+        Patient Name: ${appointment.patientId.name}
+        Chat History: ${JSON.stringify(chatHistory.messages)}
+
+        Generate a structured **short AI summary** of the patient's symptoms.
+        
+        JSON format:
+        {
+            "patientName": "John Doe",
+            "symptoms": ["Headache", "Dizziness"],
+            "possibleDiagnosis": "Migraine",
+            "additionalNotes": "Patient reports severe headaches in the morning."
+        }
+        `;
+
+        const response = await groq.chat.completions.create({
+            messages: [{ role: "user", content: prompt }],
+            model: "llama-3.1-8b-instant",
+            temperature: 0.3,
+            max_tokens: 1024,
+            top_p: 0.9,
+            response_format: { type: "json_object" }
+        });
+
+        const aiSummary = JSON.parse(response.choices[0].message.content);
+
+        res.status(200).json(aiSummary);
+    } catch (error) {
+        console.error("Error generating AI summary:", error);
+        res.status(500).json({ message: "Server Error" });
+    }
+});
+
+module.exports = { addDoctor, getAllDoctors, getDoctorById, updateDoctor, deleteDoctor,getTodayAppointments, getAppointmentsByDate, getPatientSummary };
