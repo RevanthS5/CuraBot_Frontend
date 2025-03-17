@@ -22,16 +22,41 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true); // Start with loading true
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  // Function to verify token and load user data
+  const loadUser = async () => {
     const token = localStorage.getItem('token');
-    const savedUser = localStorage.getItem('user');
-    
-    if (token && savedUser) {
-      setUser(JSON.parse(savedUser));
+    if (!token) {
+      setIsLoading(false);
+      return;
     }
+
+    try {
+      const response = await authAPI.getCurrentUser();
+      if (response.data && response.data.user) {
+        setUser(response.data.user);
+        // Update the stored user data with the latest from the server
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+      } else {
+        // If the response doesn't contain user data, clear the stored data
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      }
+    } catch (err) {
+      console.error('Error verifying authentication token:', err);
+      // If token verification fails, clear the stored data
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    // Load user data when the component mounts
+    loadUser();
   }, []);
 
   const login = async (email: string, password: string) => {

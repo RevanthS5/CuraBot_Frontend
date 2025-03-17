@@ -34,7 +34,7 @@ api.interceptors.request.use(
   }
 );
 
-// Add a response interceptor to log responses
+// Add a response interceptor to log responses and handle token expiration
 api.interceptors.response.use(
   (response) => {
     console.log('API Response:', { 
@@ -52,6 +52,21 @@ api.interceptors.response.use(
       status: error.response?.status, 
       data: error.response?.data 
     });
+
+    // Handle token expiration or authentication errors
+    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+      console.log('Authentication error detected, clearing local storage');
+      
+      // Clear token and user data from localStorage
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      
+      // Redirect to login page if not already there
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
+    }
+    
     return Promise.reject(error);
   }
 );
@@ -118,24 +133,19 @@ export const adminAPI = {
   // Admin routes from adminRoutes.js
   getDashboardStats: () => api.get('/admin/dashboard'),
   getAllPatients: () => api.get('/admin/patients'),
+  getAllDoctors: () => api.get('/admin/doctors'),
+  createDoctor: (data: any) => api.post('/admin/doctors', data),
+  updateDoctor: (id: string, data: any) => api.patch(`/admin/doctors/${id}`, data),
+  deleteDoctor: (id: string) => api.delete(`/admin/doctors/${id}`),
   
-  // Doctor management
-  addDoctor: (data: any) => api.post('/admin/doctors/add', data),
-  updateDoctor: (id: string, data: any) => api.patch(`/admin/doctors/update/${id}`, data),
-  deleteDoctor: (id: string) => api.delete(`/admin/doctors/delete/${id}`),
-  
-  // Schedule and analytics
-  getDoctorSchedule: (doctorId: string) => api.get(`/admin/doctor-schedule/${doctorId}`),
-  getAdminAnalytics: () => api.get('/admin/analytics'),
-  
-  // Appointment management
-  manageAppointment: (appointmentId: string, data: any) => api.put(`/admin/appointments/${appointmentId}`, data),
-  manuallyScheduleAppointment: (data: any) => api.post('/admin/appointments/manual', data),
+  // Analytics endpoints
+  getAppointmentStats: () => api.get('/admin/analytics/appointments'),
+  getUserStats: () => api.get('/admin/analytics/users'),
 };
 
 export const chatbotAPI = {
-  // Chatbot route from chatbotRoutes.js
-  sendMessage: (message: string) => api.post('/ai/chatbot', { message }),
+  // Chatbot routes from chatbotRoutes.js
+  sendMessage: (message: string) => api.post('/chatbot/message', { message }),
 };
 
 export default api;
