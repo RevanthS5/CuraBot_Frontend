@@ -1,0 +1,141 @@
+import axios from 'axios';
+
+// Create axios instance with base URL
+const api = axios.create({
+  baseURL: 'http://localhost:5000/api', // Update with your backend URL
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Add a request interceptor to include auth token in requests
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    
+    // Add a unique request ID to help identify duplicate requests
+    config.headers['X-Request-ID'] = Date.now().toString() + Math.random().toString(36).substring(2, 15);
+    
+    console.log('API Request:', { 
+      id: config.headers['X-Request-ID'],
+      url: config.url, 
+      method: config.method, 
+      data: config.data,
+      headers: config.headers 
+    });
+    return config;
+  },
+  (error) => {
+    console.error('API Request Error:', error);
+    return Promise.reject(error);
+  }
+);
+
+// Add a response interceptor to log responses
+api.interceptors.response.use(
+  (response) => {
+    console.log('API Response:', { 
+      id: response.config.headers['X-Request-ID'],
+      url: response.config.url, 
+      status: response.status, 
+      data: response.data 
+    });
+    return response;
+  },
+  (error) => {
+    console.error('API Response Error:', { 
+      id: error.config?.headers?.['X-Request-ID'],
+      url: error.config?.url, 
+      status: error.response?.status, 
+      data: error.response?.data 
+    });
+    return Promise.reject(error);
+  }
+);
+
+// API Services
+export const authAPI = {
+  // Auth routes from authRoutes.js
+  login: (data: { email: string; password: string }) => api.post('/auth/login', data),
+  register: (data: { name: string; email: string; phone: string; password: string }) => api.post('/auth/register', data),
+  getCurrentUser: () => api.get('/auth/me'),
+  getUserProfile: (userId: string) => api.get(`/auth/profile/${userId}`),
+  updateUserProfile: (userId: string, data: any) => api.patch(`/auth/update/${userId}`, data),
+  deleteUser: (userId: string) => api.delete(`/auth/delete/${userId}`),
+};
+
+export const userAPI = {
+  // User profile endpoints - redirecting to auth endpoints
+  getUserProfile: () => authAPI.getCurrentUser(),
+  updateUserProfile: (data: any) => {
+    const userId = JSON.parse(localStorage.getItem('user') || '{}').id;
+    return authAPI.updateUserProfile(userId, data);
+  },
+};
+
+export const appointmentAPI = {
+  // Appointment routes from appointmentRoutes.js
+  getPatientAppointments: () => api.get('/appointments/my'),
+  getAllAppointments: () => api.get('/appointments/all'),
+  bookAppointment: (data: any) => api.post('/appointments/book', data),
+  cancelAppointment: (id: string) => api.patch(`/appointments/cancel/${id}`),
+  
+  // Additional appointment endpoints (not explicitly in routes but might be needed)
+  getAppointmentDetails: (id: string) => api.get(`/appointments/${id}`),
+  rescheduleAppointment: (id: string, data: any) => api.patch(`/appointments/${id}`, data),
+};
+
+export const doctorAPI = {
+  // Doctor routes from doctorRoutes.js
+  getAllDoctors: () => api.get('/doctors'),
+  getDoctorById: (id: string) => api.get(`/doctors/${id}`),
+  
+  // Doctor-specific appointment routes
+  getTodayAppointments: () => api.get('/doctors/appointments/today'),
+  getAppointmentsByDate: (date: string) => api.get(`/doctors/appointments?date=${date}`),
+  getPatientSummary: (appointmentId: string) => api.get(`/doctors/appointment/${appointmentId}/patient-summary`),
+};
+
+export const scheduleAPI = {
+  // Schedule routes from scheduleRoutes.js
+  getDoctorAvailability: (doctorId: string) => api.get(`/schedule/${doctorId}`),
+  setDoctorAvailability: (data: any) => api.post('/schedule', data),
+  updateDoctorAvailability: (data: any) => api.patch('/schedule', data),
+};
+
+export const patientAPI = {
+  // Patient-specific endpoints (these would need to be implemented on the backend)
+  getPatientProfile: () => userAPI.getUserProfile(),
+  updatePatientProfile: (data: any) => userAPI.updateUserProfile(data),
+  getMedicalRecords: () => api.get('/patients/medical-records'),
+  getMedicalRecordDetails: (id: string) => api.get(`/patients/medical-records/${id}`),
+};
+
+export const adminAPI = {
+  // Admin routes from adminRoutes.js
+  getDashboardStats: () => api.get('/admin/dashboard'),
+  getAllPatients: () => api.get('/admin/patients'),
+  
+  // Doctor management
+  addDoctor: (data: any) => api.post('/admin/doctors/add', data),
+  updateDoctor: (id: string, data: any) => api.patch(`/admin/doctors/update/${id}`, data),
+  deleteDoctor: (id: string) => api.delete(`/admin/doctors/delete/${id}`),
+  
+  // Schedule and analytics
+  getDoctorSchedule: (doctorId: string) => api.get(`/admin/doctor-schedule/${doctorId}`),
+  getAdminAnalytics: () => api.get('/admin/analytics'),
+  
+  // Appointment management
+  manageAppointment: (appointmentId: string, data: any) => api.put(`/admin/appointments/${appointmentId}`, data),
+  manuallyScheduleAppointment: (data: any) => api.post('/admin/appointments/manual', data),
+};
+
+export const chatbotAPI = {
+  // Chatbot route from chatbotRoutes.js
+  sendMessage: (message: string) => api.post('/ai/chatbot', { message }),
+};
+
+export default api;
