@@ -45,7 +45,7 @@ const bookAppointment = async (req, res) => {
             scheduleId: schedule._id,
             date,
             time,
-            status: "confirmed",
+            status: "pending",
         });
 
         await appointment.save();
