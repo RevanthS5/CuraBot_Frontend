@@ -155,13 +155,20 @@ const getAppointmentsByDate = asyncHandler(async (req, res) => {
 const getPatientSummary = asyncHandler(async (req, res) => {
     try {
         const { appointmentId } = req.params;
-        
-        const appointment = await Appointment.findById(appointmentId).populate("patientId", "name email");
+
+        // ✅ Fetch the appointment & ensure it has a linked chatbot session
+        const appointment = await Appointment.findById(appointmentId)
+            .populate("patientId", "name email")
+            .populate("chatSessionId"); // 🔥 Fetch the linked chatbot session
+
         if (!appointment) return res.status(404).json({ message: "Appointment not found" });
+        if (!appointment.chatSessionId) return res.status(404).json({ message: "No chatbot session linked to this appointment" });
 
-        const chatHistory = await Chat.findOne({ userId: appointment.patientId._id });
-        if (!chatHistory) return res.status(404).json({ message: "No chatbot history found for this patient" });
+        // ✅ Fetch chat history ONLY from the linked chatbot session
+        const chatHistory = appointment.chatSessionId;
+        if (!chatHistory) return res.status(404).json({ message: "No chatbot history found for this session" });
 
+        // 🔥 Use Groq AI to summarize patient chat
         const prompt = `
         Patient Name: ${appointment.patientId.name}
         Chat History: ${JSON.stringify(chatHistory.messages)}

@@ -6,15 +6,18 @@ const Doctor = require("../models/Doctor.js");
 const bookAppointment = async (req, res) => {
     try {
         const { doctorId, date, time } = req.body;
-        const patientId = req.user.id; // Get patient ID from JWT token
+        const patientId = req.user.id;
 
-        // Check if doctor exists
+        // ✅ Find the latest chatbot session of this user
+        const latestChatSession = await Chat.findOne({ userId: patientId }).sort({ createdAt: -1 });
+
+        // ✅ Ensure doctor exists
         const doctor = await Doctor.findById(doctorId);
         if (!doctor) {
             return res.status(404).json({ message: "Doctor not found" });
         }
 
-        // Check if the time slot is available
+        // ✅ Check if the time slot is available
         const schedule = await Schedule.findOne({ doctorId, "availableSlots.date": date });
 
         if (!schedule) {
@@ -34,15 +37,25 @@ const bookAppointment = async (req, res) => {
             return res.status(400).json({ message: "Time slot is not available" });
         }
 
-        // Mark the time slot as booked
+        // ✅ Mark the time slot as booked
         timeSlot.isBooked = true;
         await schedule.save();
 
-        // Create an appointment
-        const appointment = new Appointment({ patientId, doctorId, scheduleId: schedule._id, date, time });
+        // ✅ Create an appointment with the chatbot session ID
+        const appointment = new Appointment({
+            patientId,
+            doctorId,
+            scheduleId: schedule._id,
+            date,
+            time,
+            chatSessionId: latestChatSession ? latestChatSession._id : null, // 🔥 Store the chatbot session if available
+            status: "confirmed",
+        });
+
         await appointment.save();
 
         res.status(201).json({ message: "Appointment booked successfully", appointment });
+
     } catch (error) {
         console.error("Error booking appointment:", error.message);
         res.status(500).json({ message: "Server Error" });
