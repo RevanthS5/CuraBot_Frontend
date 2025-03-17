@@ -60,7 +60,7 @@ export default function Landing() {
                       to="/login"
                       className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-primary-700 bg-primary-100 hover:bg-primary-200 md:py-4 md:text-lg md:px-10"
                     >
-                      Sign in
+                      Login
                     </Link>
                   </div>
                 </div>
