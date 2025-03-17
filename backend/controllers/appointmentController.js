@@ -8,9 +8,6 @@ const bookAppointment = async (req, res) => {
         const { doctorId, date, time } = req.body;
         const patientId = req.user.id;
 
-        // ✅ Find the latest chatbot session of this user
-        const latestChatSession = await Chat.findOne({ userId: patientId }).sort({ createdAt: -1 });
-
         // ✅ Ensure doctor exists
         const doctor = await Doctor.findById(doctorId);
         if (!doctor) {
@@ -41,14 +38,13 @@ const bookAppointment = async (req, res) => {
         timeSlot.isBooked = true;
         await schedule.save();
 
-        // ✅ Create an appointment with the chatbot session ID
+        // ✅ Create an appointment (🔥 Chat session removed)
         const appointment = new Appointment({
             patientId,
             doctorId,
             scheduleId: schedule._id,
             date,
             time,
-            chatSessionId: latestChatSession ? latestChatSession._id : null, // 🔥 Store the chatbot session if available
             status: "confirmed",
         });
 
@@ -57,10 +53,11 @@ const bookAppointment = async (req, res) => {
         res.status(201).json({ message: "Appointment booked successfully", appointment });
 
     } catch (error) {
-        console.error("Error booking appointment:", error.message);
+        console.error("❌ Error booking appointment:", error.message);
         res.status(500).json({ message: "Server Error" });
     }
 };
+
 
 // ✅ Get All Appointments (Admin & Doctor)
 const getAllAppointments = async (req, res) => {

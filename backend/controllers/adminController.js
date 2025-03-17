@@ -137,43 +137,63 @@ const getAdminAnalytics = asyncHandler(async (req, res) => {
     try {
         const { period } = req.query; // Accepts "day", "week", "month"
 
-        // Get the start date for filtering
+        // Get the start and end date for filtering
         let startDate = new Date();
+        let endDate = new Date();
+
         if (period === "week") {
             startDate.setDate(startDate.getDate() - 7); // Last 7 days
         } else if (period === "month") {
             startDate.setMonth(startDate.getMonth() - 1); // Last 30 days
         } else {
             startDate.setHours(0, 0, 0, 0); // Only for today
+            endDate.setHours(23, 59, 59, 999);
         }
 
         // Fetch filtered data from MongoDB
-        const totalAppointments = await Appointment.countDocuments({ date: { $gte: startDate } });
-        const completedAppointments = await Appointment.countDocuments({ date: { $gte: startDate }, status: "completed" });
-        const cancelledAppointments = await Appointment.countDocuments({ date: { $gte: startDate }, status: "cancelled" });
+        const totalAppointments = await Appointment.countDocuments({ date: { $gte: startDate, $lte: endDate } });
+        const completedAppointments = await Appointment.countDocuments({ date: { $gte: startDate, $lte: endDate }, status: "completed" });
+        const cancelledAppointments = await Appointment.countDocuments({ date: { $gte: startDate, $lte: endDate }, status: "cancelled" });
 
-        // Aggregate Doctor Workload & Peak Time Data (Only for Selected Period)
+        // Aggregate Doctor Workload (Appointments per Doctor)
         const doctorWorkload = await Appointment.aggregate([
-            { $match: { date: { $gte: startDate } } },
+            { $match: { date: { $gte: startDate, $lte: endDate } } },
             { $group: { _id: "$doctorId", totalAppointments: { $sum: 1 } } },
-            { $sort: { totalAppointments: -1 } },
+            { $sort: { totalAppointments: -1 } }
         ]);
 
+        // ✅ Extract Peak Appointment Hours from actual appointment times
         const peakHoursData = await Appointment.aggregate([
-            { $match: { date: { $gte: startDate } } },
+            { $match: { date: { $gte: startDate, $lte: endDate } } },
             { $group: { _id: "$time", totalAppointments: { $sum: 1 } } },
             { $sort: { totalAppointments: -1 } },
             { $limit: 5 } // Top 5 busiest times
-        ]);
+        ]).then(results => results.map(entry => entry._id)); // Extract only the time values
 
-        // Fetch Schedule Data for Doctor Availability Insights
+        // ✅ Fetch accurate Doctor Availability and Booked Slots
         const doctorSchedules = await Schedule.aggregate([
-            { $match: { "availableSlots.date": { $gte: startDate } } },
+            { $match: { "availableSlots.date": { $gte: startDate, $lte: endDate } } },
             {
-                $group: {
-                    _id: "$doctorId",
-                    totalAvailableSlots: { $sum: { $size: "$availableSlots" } },
-                    bookedSlots: { $sum: { $size: "$bookedSlots" } }
+                $project: {
+                    doctorId: 1,
+                    totalAvailableSlots: {
+                        $sum: {
+                            $map: {
+                                input: "$availableSlots",
+                                as: "slot",
+                                in: { $size: { $filter: { input: "$$slot.times", as: "time", cond: { $eq: ["$$time.isBooked", false] } } } }
+                            }
+                        }
+                    },
+                    bookedSlots: {
+                        $sum: {
+                            $map: {
+                                input: "$availableSlots",
+                                as: "slot",
+                                in: { $size: { $filter: { input: "$$slot.times", as: "time", cond: { $eq: ["$$time.isBooked", true] } } } }
+                            }
+                        }
+                    }
                 }
             }
         ]);
@@ -201,9 +221,9 @@ const getAdminAnalytics = asyncHandler(async (req, res) => {
 
         Provide structured insights **only for the selected period (${period})**, in JSON format:
         {
-            "peakHours": ["9AM-11AM", "4PM-6PM"],
+            "peakHours": ${JSON.stringify(peakHoursData)},
             "overloadedDoctors": [{"doctorId": "67d16bcf024e773b6fddf3ad", "totalAppointments": 12}],
-            "doctorAvailability": [{"doctorId": "67d16bcf024e773b6fddf3ad", "availableSlots": 2, "bookedSlots": 8}],
+            "doctorAvailability": ${JSON.stringify(doctorSchedules)},
             "cancellationTrends": "Most cancellations happen between 8AM-10AM",
             "recommendations": [
                 "Consider extending evening consultation hours for overloaded doctors",
@@ -214,7 +234,7 @@ const getAdminAnalytics = asyncHandler(async (req, res) => {
 
         const response = await groq.chat.completions.create({
             messages: [{ role: "user", content: prompt }],
-            model: "llama-3.1-8b-instant",  // ✅ Stronger reasoning model
+            model: "llama-3.1-8b-instant",
             temperature: 0.3,
             max_tokens: 1024,
             top_p: 0.9,
@@ -234,10 +254,13 @@ const getAdminAnalytics = asyncHandler(async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Error fetching AI-powered analytics:", error);
+        console.error("❌ Error fetching AI-powered analytics:", error);
         res.status(500).json({ message: "Server Error" });
     }
 });
+
+
+
 
 module.exports = {
     getAdminDashboard,

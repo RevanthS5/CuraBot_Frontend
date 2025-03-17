@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const asyncHandler = require("express-async-handler");
 const { Groq } = require("groq-sdk");
 const Appointment = require("../models/Appointment.js");
@@ -129,16 +130,20 @@ const getTodayAppointments = asyncHandler(async (req, res) => {
 // ✅ Get Appointments by Selected Date
 const getAppointmentsByDate = asyncHandler(async (req, res) => {
     try {
-        const doctorId = req.user.id; 
         const { date } = req.query;
         
         if (!date) return res.status(400).json({ message: "Date is required" });
+
+        const doctorId = req.user.id; // Get doctor ID from authenticated user
+        if (!mongoose.Types.ObjectId.isValid(doctorId)) {
+            return res.status(400).json({ message: "Invalid doctor ID" });
+        }
 
         const selectedDate = new Date(date);
         selectedDate.setHours(0, 0, 0, 0);
 
         const appointments = await Appointment.find({
-            doctorId,
+            doctorId: new mongoose.Types.ObjectId(doctorId), // ✅ Convert doctorId to ObjectId
             date: { $gte: selectedDate, $lt: new Date(selectedDate.getTime() + 86400000) }
         })
         .populate("patientId", "name email")

@@ -6,7 +6,7 @@ const AppointmentSchema = new mongoose.Schema({
     scheduleId: { type: mongoose.Schema.Types.ObjectId, ref: "Schedule", required: true }, 
     date: { type: Date, required: true }, 
     time: { type: String, required: true }, 
-    chatSessionId: { type: mongoose.Schema.Types.ObjectId, ref: "Chat", default: null }, // 🔥 New field for chat session
+    // chatSessionId: { type: mongoose.Schema.Types.ObjectId, ref: "Chat", default: null }, // 🔥 New field for chat session
     status: { type: String, enum: ["pending", "confirmed", "cancelled"], default: "pending" }, 
     createdAt: { type: Date, default: Date.now }
 });
