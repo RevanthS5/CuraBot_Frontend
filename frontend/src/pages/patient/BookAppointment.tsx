@@ -58,14 +58,12 @@ export default function BookAppointment() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [specialtyFilter, setSpecialtyFilter] = useState('');
   const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([]);
   const [availableDates, setAvailableDates] = useState<string[]>([]);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [step, setStep] = useState(1);
-  const [specialties, setSpecialties] = useState<string[]>([]);
   
   const { values, setValues, handleChange } = useForm({
     date: new Date().toISOString().split('T')[0],
@@ -86,13 +84,6 @@ export default function BookAppointment() {
         
         setDoctors(doctorsData);
         setFilteredDoctors(doctorsData);
-        
-        // Extract unique specialties from doctors data
-        const uniqueSpecialties = Array.from(
-          new Set(doctorsData.map((doctor: Doctor) => doctor.specialty))
-        ).filter(Boolean) as string[];
-        
-        setSpecialties(uniqueSpecialties);
       } catch (err) {
         console.error('Error fetching doctors:', err);
         setError('Failed to load doctors. Please try again later.');
@@ -105,19 +96,13 @@ export default function BookAppointment() {
   }, []);
 
   useEffect(() => {
-    // Filter doctors based on search term and specialty
+    // Filter doctors based on search term
     const filtered = doctors.filter(doctor => {
-      const matchesSearch = 
-        doctor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        doctor.specialty.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchesSpecialty = specialtyFilter ? doctor.specialty === specialtyFilter : true;
-      
-      return matchesSearch && matchesSpecialty;
+      return doctor.name.toLowerCase().includes(searchTerm.toLowerCase());
     });
     
     setFilteredDoctors(filtered);
-  }, [searchTerm, specialtyFilter, doctors]);
+  }, [searchTerm, doctors]);
 
   const fetchAvailableTimes = async (doctorId: string) => {
     try {
@@ -232,34 +217,17 @@ export default function BookAppointment() {
 
   const renderDoctorSelection = () => (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="relative flex-1">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="h-5 w-5 text-gray-400" />
-          </div>
-          <input
-            type="text"
-            placeholder="Search doctors by name or specialty..."
-            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+      <div className="relative">
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <Search className="h-5 w-5 text-gray-400" />
         </div>
-        
-        <div className="flex items-center">
-          <select
-            className="block w-full md:w-auto px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-            value={specialtyFilter}
-            onChange={(e) => setSpecialtyFilter(e.target.value)}
-          >
-            <option value="">All Specialties</option>
-            {specialties.map((specialty) => (
-              <option key={specialty} value={specialty}>
-                {specialty}
-              </option>
-            ))}
-          </select>
-        </div>
+        <input
+          type="text"
+          placeholder="Search doctors by name..."
+          className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
       </div>
       
       {isLoading ? (
