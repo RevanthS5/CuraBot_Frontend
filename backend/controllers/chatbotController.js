@@ -72,7 +72,7 @@ const analyzeSymptomsWithGroq = async (symptoms, previousAnswers = [], doctorLis
 
   const response = await groq.chat.completions.create({
     messages: [{ role: "user", content: prompt }],
-    model: "deepseek-r1-distill-qwen-32b",
+    model: "llama-3.1-8b-instant",
     temperature: 0.5,
     max_tokens: 1024,
     top_p: 0.9,
