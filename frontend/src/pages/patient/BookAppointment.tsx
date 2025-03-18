@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Search, User, MapPin } from 'lucide-react';
 import { doctorAPI, appointmentAPI, scheduleAPI } from '../../services/api';
 import Card from '../../components/Card';
@@ -53,6 +53,7 @@ interface AvailableSlot {
 
 export default function BookAppointment() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [filteredDoctors, setFilteredDoctors] = useState<Doctor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -69,6 +70,35 @@ export default function BookAppointment() {
     date: new Date().toISOString().split('T')[0],
     reason: ''
   });
+
+  // Get doctorId from URL query parameters
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);
+    const doctorId = queryParams.get('doctorId');
+    
+    if (doctorId) {
+      const selectDoctorFromId = async () => {
+        try {
+          setIsLoading(true);
+          const response = await doctorAPI.getDoctorById(doctorId);
+          const doctor = response.data;
+          
+          if (doctor) {
+            setSelectedDoctor(doctor);
+            await fetchAvailableTimes(doctor._id);
+            setStep(2);
+          }
+        } catch (err) {
+          console.error('Error fetching doctor by ID:', err);
+          setError('Failed to load the selected doctor. Please try again later.');
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      
+      selectDoctorFromId();
+    }
+  }, [location.search]);
 
   useEffect(() => {
     const fetchDoctors = async () => {

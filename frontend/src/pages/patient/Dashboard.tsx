@@ -9,6 +9,7 @@ import PatientAppointments from './Appointments';
 import BookAppointment from './BookAppointment';
 import MedicalRecords from './MedicalRecords';
 import Profile from './Profile';
+import Assistant from './Assistant';
 
 interface Appointment {
   _id: string;
@@ -33,6 +34,7 @@ export default function PatientDashboard() {
       <Route path="/appointments/book" element={<BookAppointment />} />
       <Route path="/medical-records" element={<MedicalRecords />} />
       <Route path="/profile" element={<Profile />} />
+      <Route path="/assistant" element={<Assistant />} />
     </Routes>
   );
 }

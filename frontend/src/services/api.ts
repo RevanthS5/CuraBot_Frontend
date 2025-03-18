@@ -145,7 +145,7 @@ export const adminAPI = {
 
 export const chatbotAPI = {
   // Chatbot routes from chatbotRoutes.js
-  sendMessage: (message: string) => api.post('/chatbot/message', { message }),
+  sendMessage: (userId: string, message: string) => api.post('/ai/chatbot', { userId, message }),
 };
 
 export default api;
