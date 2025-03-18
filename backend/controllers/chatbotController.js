@@ -19,17 +19,17 @@ try {
 }
 
 // ✅ Enhanced AI-Powered Medical Assistant with Multiple Capabilities
-const processUserQuery = async (userId, message, chatHistory) => {
+const processUserQuery = async (userId, message) => {
   // Get all doctors for reference
   const doctors = await getAllDoctors();
   
-  // Extract intent from user message
-  const intent = await determineUserIntent(message, chatHistory);
+  // Extract intent from user message (without relying on chat history)
+  const intent = await determineUserIntent(message);
   
   // Process based on intent
   switch (intent.type) {
     case "symptom_analysis":
-      return await handleSymptomAnalysis(userId, message, chatHistory, doctors);
+      return await handleSymptomAnalysis(userId, message, doctors);
     case "doctor_availability":
       return await handleDoctorAvailability(intent.doctorId, intent.date);
     case "appointment_info":
@@ -40,22 +40,33 @@ const processUserQuery = async (userId, message, chatHistory) => {
       return await handleRescheduleRequest(userId, intent.appointmentId, intent.newDate, intent.newTime);
     case "general_question":
       return await handleGeneralQuestion(message);
+    case "medication_reminder":
+      return await handleMedicationReminder(userId, intent.medicationName, intent.time);
+    case "health_tips":
+      return await handleHealthTips(intent.category);
+    case "emergency_info":
+      return await handleEmergencyInfo();
+    case "user_profile":
+      return await handleUserProfile(userId);
     default:
       return {
-        message: "I'm not sure how to help with that. You can ask me about doctor availability, your appointments, or describe your symptoms for a doctor recommendation."
+        message: "I'm not sure how to help with that. You can ask me about doctor availability, your appointments, describe your symptoms, or ask for health tips.",
+        suggestions: [
+          "Find a doctor for my headache",
+          "When is my next appointment?",
+          "Show me my profile",
+          "Give me health tips"
+        ]
       };
   }
 };
 
-// ✅ Determine user intent using LLM
-const determineUserIntent = async (message, chatHistory) => {
+// ✅ Determine user intent using LLM (without relying on chat history)
+const determineUserIntent = async (message) => {
   const prompt = `
   You are an AI assistant for a healthcare application. Analyze the following user message and determine the user's intent.
   
   User message: "${message}"
-  
-  Previous conversation context:
-  ${chatHistory.slice(-5).map(m => `${m.sender}: ${m.message}`).join("\n")}
   
   Identify the primary intent from these categories:
   1. symptom_analysis - User is describing symptoms or health concerns
@@ -64,6 +75,10 @@ const determineUserIntent = async (message, chatHistory) => {
   4. doctor_info - User is asking about a specific doctor's information (extract doctorId)
   5. reschedule_request - User wants to reschedule an appointment (extract appointmentId, newDate, newTime if mentioned)
   6. general_question - User is asking a general healthcare question
+  7. medication_reminder - User wants to set or check medication reminders (extract medicationName and time if mentioned)
+  8. health_tips - User is asking for health tips or advice (extract category if mentioned)
+  9. emergency_info - User is asking about emergency services or procedures
+  10. user_profile - User wants to see or update their profile information
   
   Respond in JSON format:
   {
@@ -72,7 +87,10 @@ const determineUserIntent = async (message, chatHistory) => {
     "appointmentId": "appointment_id_if_mentioned_or_null",
     "date": "date_if_mentioned_or_null",
     "newDate": "new_date_if_mentioned_for_reschedule_or_null",
-    "newTime": "new_time_if_mentioned_for_reschedule_or_null"
+    "newTime": "new_time_if_mentioned_for_reschedule_or_null",
+    "medicationName": "medication_name_if_mentioned_or_null",
+    "time": "time_if_mentioned_for_medication_or_null",
+    "category": "health_tip_category_if_mentioned_or_null"
   }
   `;
 
@@ -93,34 +111,50 @@ const determineUserIntent = async (message, chatHistory) => {
 };
 
 // ✅ Handle symptom analysis (existing functionality enhanced)
-const handleSymptomAnalysis = async (userId, message, chatHistory, doctors) => {
-  const previousMessages = chatHistory.filter(m => m.sender === "user").map(m => m.message);
-  const extractedSymptoms = previousMessages.flatMap(m => m.split(" "));
+const handleSymptomAnalysis = async (userId, message, doctors) => {
+  const extractedSymptoms = message.split(" ");
+  const previousMessages = [];
   
-  const analysis = await analyzeSymptomsWithGroq(extractedSymptoms, previousMessages, doctors);
-  
-  const totalQuestionsAsked = chatHistory.filter(m => m.sender === "bot" && m.message.includes("?")).length;
-  
-  if (totalQuestionsAsked < 2 && analysis.followUpQuestions && analysis.followUpQuestions.length > 0) {
-    return { response: analysis.followUpQuestions[0] };
+  try {
+    // Get user info for personalization
+    const user = await User.findById(userId);
+    const userName = user ? user.name : null;
+    
+    const analysis = await analyzeSymptomsWithGroq(extractedSymptoms, previousMessages, doctors);
+    
+    // If we have follow-up questions, ask them in a conversational way
+    if (analysis.followUpQuestions && analysis.followUpQuestions.length > 0) {
+      return { 
+        response: userName ? `${userName}, ${analysis.followUpQuestions[0].toLowerCase()}` : analysis.followUpQuestions[0]
+      };
+    }
+    
+    const recommendedDoctors = analysis.recommendedDoctors;
+    
+    if (!recommendedDoctors || recommendedDoctors.length === 0) {
+      return { 
+        response: "I'm having trouble finding the right doctor based on the symptoms you've described. Could you provide more details about what you're experiencing? Or you might want to try describing your symptoms differently."
+      };
+    }
+    
+    // Keep structured response for doctor recommendations
+    return {
+      message: analysis.reassurance || "Based on what you've described, here are some doctors who might be able to help:",
+      doctors: recommendedDoctors.map(doc => ({
+        id: doc.id,
+        name: doc.name,
+        speciality: doc.speciality,
+        qualification: doc.qualification,
+        reasoning: doc.reasoning
+      })),
+      note: "Remember, this is just a suggestion based on the information provided. A proper medical consultation is always recommended."
+    };
+  } catch (error) {
+    console.error("Error in symptom analysis:", error);
+    return { 
+      response: "I'm sorry, I'm having trouble analyzing your symptoms right now. This could be due to a technical issue. You can try again or describe your symptoms differently."
+    };
   }
-  
-  const recommendedDoctors = analysis.recommendedDoctors;
-  
-  if (!recommendedDoctors || recommendedDoctors.length === 0) {
-    return { response: "I'm sorry, I couldn't find suitable doctors for your symptoms at this time." };
-  }
-  
-  return {
-    message: "Based on your symptoms, here are the best doctor recommendations:",
-    doctors: recommendedDoctors.map(doc => ({
-      id: doc.id,
-      name: doc.name,
-      speciality: doc.speciality,
-      qualification: doc.qualification,
-      reasoning: doc.reasoning
-    }))
-  };
 };
 
 // ✅ NEW: Handle doctor availability queries
@@ -138,15 +172,11 @@ const handleDoctorAvailability = async (doctorId, date) => {
           response: `I couldn't find a doctor matching "${doctorId}". Could you please provide the full name or try another doctor?` 
         };
       } else if (doctors.length > 1) {
-        return {
-          message: "I found multiple doctors matching that name. Which one did you mean?",
-          doctors: doctors.map(doc => ({
-            id: doc._id,
-            name: doc.name,
-            speciality: doc.speciality,
-            qualification: doc.qualification
-          }))
-        };
+        let response = "I found multiple doctors matching that name. Which one did you mean?\n\n";
+        doctors.forEach((doc, index) => {
+          response += `${index + 1}. Dr. ${doc.name} (${doc.speciality}, ${doc.qualification})\n`;
+        });
+        return { response };
       }
       
       doctor = doctors[0];
@@ -188,25 +218,21 @@ const handleDoctorAvailability = async (doctorId, date) => {
         .slice(0, 5);
     }
     
-    // Format the response
-    const formattedSlots = availableSlots.map(slot => {
+    // Format the response as a string
+    let response = `Here's Dr. ${doctor.name}'s availability:\n\n`;
+    
+    availableSlots.forEach(slot => {
       const slotDate = new Date(slot.date);
       const availableTimes = slot.times
         .filter(time => !time.isBooked)
         .map(time => time.time);
       
-      return {
-        date: slotDate.toDateString(),
-        availableTimes: availableTimes
-      };
+      if (availableTimes.length > 0) {
+        response += `${slotDate.toDateString()}: ${availableTimes.join(", ")}\n`;
+      }
     });
     
-    return {
-      message: `Here's Dr. ${doctor.name}'s availability:`,
-      doctorId: doctor._id,
-      doctorName: doctor.name,
-      availability: formattedSlots
-    };
+    return { response };
   } catch (error) {
     console.error("Error handling doctor availability:", error);
     return { response: "I'm having trouble checking the doctor's availability right now. Please try again later." };
@@ -233,17 +259,16 @@ const handleAppointmentInfo = async (userId, appointmentId) => {
       return { response: "You don't have any upcoming appointments scheduled." };
     }
     
-    return {
-      message: appointmentId ? "Here's your appointment information:" : "Here are your upcoming appointments:",
-      appointments: appointments.map(appt => ({
-        id: appt._id,
-        doctor: appt.doctorId.name,
-        speciality: appt.doctorId.speciality,
-        date: new Date(appt.date).toDateString(),
-        time: appt.time,
-        status: appt.status
-      }))
-    };
+    let response = appointmentId ? "Here's your appointment information:\n\n" : "Here are your upcoming appointments:\n\n";
+    
+    appointments.forEach((appt, index) => {
+      response += `${index + 1}. Dr. ${appt.doctorId.name} (${appt.doctorId.speciality})\n`;
+      response += `   Date: ${new Date(appt.date).toDateString()}\n`;
+      response += `   Time: ${appt.time}\n`;
+      response += `   Status: ${appt.status}\n\n`;
+    });
+    
+    return { response };
   } catch (error) {
     console.error("Error handling appointment info:", error);
     return { response: "I'm having trouble retrieving your appointment information right now. Please try again later." };
@@ -265,15 +290,11 @@ const handleDoctorInfo = async (doctorId) => {
           response: `I couldn't find a doctor matching "${doctorId}". Could you please provide the full name or try another doctor?` 
         };
       } else if (doctors.length > 1) {
-        return {
-          message: "I found multiple doctors matching that name. Which one did you mean?",
-          doctors: doctors.map(doc => ({
-            id: doc._id,
-            name: doc.name,
-            speciality: doc.speciality,
-            qualification: doc.qualification
-          }))
-        };
+        let response = "I found multiple doctors matching that name. Which one did you mean?\n\n";
+        doctors.forEach((doc, index) => {
+          response += `${index + 1}. Dr. ${doc.name} (${doc.speciality}, ${doc.qualification})\n`;
+        });
+        return { response };
       }
       
       doctor = doctors[0];
@@ -299,18 +320,15 @@ const handleDoctorInfo = async (doctorId) => {
         }, 0);
     }
     
-    return {
-      message: `Here's information about Dr. ${doctor.name}:`,
-      doctor: {
-        id: doctor._id,
-        name: doctor.name,
-        speciality: doctor.speciality,
-        qualification: doctor.qualification,
-        expertise: doctor.expertise,
-        overview: doctor.overview,
-        availableSlots: availabilityCount
-      }
-    };
+    let response = `Here's information about Dr. ${doctor.name}:\n\n`;
+    response += `Name: Dr. ${doctor.name}\n`;
+    response += `Speciality: ${doctor.speciality}\n`;
+    response += `Qualification: ${doctor.qualification}\n`;
+    response += `Expertise: ${doctor.expertise.join(", ")}\n\n`;
+    response += `Overview: ${doctor.overview}\n\n`;
+    response += `Available Slots: ${availabilityCount}\n`;
+    
+    return { response };
   } catch (error) {
     console.error("Error handling doctor info:", error);
     return { response: "I'm having trouble retrieving the doctor's information right now. Please try again later." };
@@ -339,14 +357,12 @@ const handleRescheduleRequest = async (userId, appointmentId, newDate, newTime) 
     // If no new date/time specified, just provide info
     if (!newDate && !newTime) {
       return {
-        message: `Your appointment with Dr. ${appointment.doctorId.name} is currently scheduled for ${new Date(appointment.date).toDateString()} at ${appointment.time}.`,
-        note: "To reschedule, please specify a new date and time, or visit the appointments page."
+        response: `Your appointment with Dr. ${appointment.doctorId.name} is currently scheduled for ${new Date(appointment.date).toDateString()} at ${appointment.time}. To reschedule, please specify a new date and time, or visit the appointments page.`
       };
     }
     
     return {
-      message: `I understand you want to reschedule your appointment with Dr. ${appointment.doctorId.name}.`,
-      note: "To complete the rescheduling process, please use the 'Reschedule' button on the appointments page. I've noted your preferred new date/time."
+      response: `I understand you want to reschedule your appointment with Dr. ${appointment.doctorId.name}. To complete the rescheduling process, please use the 'Reschedule' button on the appointments page. I've noted your preferred new date/time.`
     };
   } catch (error) {
     console.error("Error handling reschedule request:", error);
@@ -380,14 +396,119 @@ const handleGeneralQuestion = async (message) => {
   }
 };
 
+// ✅ NEW: Handle medication reminders
+const handleMedicationReminder = async (userId, medicationName, time) => {
+  try {
+    // This is a placeholder for actual medication reminder functionality
+    // In a real implementation, you would store this in a database
+    
+    if (!medicationName) {
+      return { response: "I can help you set medication reminders. Please specify which medication you'd like to be reminded about and when." };
+    }
+    
+    if (!time) {
+      return { response: `I'll set up a reminder for ${medicationName}. What time would you like to be reminded?` };
+    }
+    
+    // Get user info for personalization
+    const user = await User.findById(userId);
+    
+    return { response: `Great! I've set a reminder for you to take ${medicationName} at ${time}. I'll send you a notification at ${time}, ${user ? user.name : 'there'}. Is there anything else you'd like me to help you with?` };
+  } catch (error) {
+    console.error("Error handling medication reminder:", error);
+    return { response: "I'm having trouble setting up your medication reminder right now. Please try again later." };
+  }
+};
+
+// ✅ NEW: Handle health tips
+const handleHealthTips = async (category) => {
+  try {
+    let prompt;
+    
+    if (category) {
+      prompt = `
+      You are a healthcare assistant providing brief, helpful health tips. 
+      Give 3 practical, evidence-based tips about ${category}.
+      Each tip should be 1-2 sentences maximum.
+      Format as a numbered list.
+      `;
+    } else {
+      prompt = `
+      You are a healthcare assistant providing brief, helpful health tips.
+      Give 3 practical, evidence-based general health tips that most people would benefit from.
+      Each tip should be 1-2 sentences maximum.
+      Format as a numbered list.
+      `;
+    }
+    
+    const response = await groq.chat.completions.create({
+      messages: [{ role: "user", content: prompt }],
+      model: "llama-3.1-8b-instant",
+      temperature: 0.5,
+      max_tokens: 300
+    });
+    
+    const tips = response.choices[0].message.content.trim();
+    return { response: category ? `Here are some health tips about ${category}:\n\n${tips}` : `Here are some general health tips:\n\n${tips}` };
+  } catch (error) {
+    console.error("Error handling health tips:", error);
+    return { response: "I'm having trouble retrieving health tips right now. Please try again later." };
+  }
+};
+
+// ✅ NEW: Handle emergency information
+const handleEmergencyInfo = async () => {
+  return { response: "For medical emergencies, please call emergency services immediately:\n\n- Call 911 (or your local emergency number) for life-threatening situations\n- For poison control: 1-800-222-1222\n- If you're experiencing severe symptoms, go to the nearest emergency room\n\nThis is general advice and not a substitute for professional medical help. Always call emergency services in critical situations." };
+};
+
+// ✅ NEW: Handle user profile information
+const handleUserProfile = async (userId) => {
+  try {
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return { response: "I couldn't find your user profile. Please try again later or contact support." };
+    }
+    
+    // Get user's appointments
+    const appointments = await Appointment.find({ patientId: userId })
+      .sort({ date: 1 })
+      .populate('doctorId', 'name speciality')
+      .limit(3);
+    
+    const upcomingAppointments = appointments.filter(appt => new Date(appt.date) >= new Date());
+    
+    let response = `Hello ${user.name}, here's your profile information:\n\n`;
+    response += `Name: ${user.name}\n`;
+    response += `Email: ${user.email}\n`;
+    response += `Phone: ${user.phone}\n`;
+    response += `Member since: ${new Date(user.createdAt).toLocaleDateString()}\n\n`;
+    
+    if (upcomingAppointments.length > 0) {
+      response += "Upcoming appointments:\n";
+      upcomingAppointments.forEach((appt, index) => {
+        response += `${index + 1}. Dr. ${appt.doctorId.name} (${appt.doctorId.speciality}) on ${new Date(appt.date).toDateString()} at ${appt.time}\n`;
+      });
+    } else {
+      response += "You don't have any upcoming appointments.";
+    }
+    
+    return { response };
+  } catch (error) {
+    console.error("Error handling user profile:", error);
+    return { response: "I'm having trouble retrieving your profile information right now. Please try again later." };
+  }
+};
+
 // ✅ AI-Generated Follow-Up Questions & Analysis Using Groq (LIMITED to 2-3 Questions)
 const analyzeSymptomsWithGroq = async (symptoms, previousAnswers = [], doctorList) => {
   const followUpLimit = 2; // Max 2 follow-up questions
 
   const prompt = `
   You are a medical assistant AI that helps diagnose symptoms and recommend the best doctor.
+  Your tone should be warm, empathetic, and conversational - like a caring healthcare professional.
 
-  Symptoms so far: ${symptoms.join(", ")}
+  Symptoms described: "${symptoms.join(" ")}"
   Additional patient responses: ${previousAnswers.join(", ")}
 
   Here is the list of available doctors:
@@ -401,15 +522,17 @@ const analyzeSymptomsWithGroq = async (symptoms, previousAnswers = [], doctorLis
   `).join("\n\n")}
 
   Please analyze the symptoms and:
-  1. Extract any additional symptoms mentioned.
-  2. Generate up to ${followUpLimit} follow-up questions to better understand the condition.
+  1. Extract key symptoms mentioned, focusing on medically relevant terms.
+  2. Generate up to ${followUpLimit} follow-up questions to better understand the condition. Make these questions conversational and empathetic, as if a caring doctor is asking them. Avoid clinical or robotic language.
   3. If enough data is available, recommend the 3 best doctors based on expertise, specialization, and patient condition.
-  4. Provide a simple 2-line reason for each recommended doctor.
+  4. Provide a simple 2-line reason for each recommended doctor that sounds natural and helpful.
+  5. Include a brief, empathetic note of reassurance (1-2 sentences) that acknowledges the patient's concerns without making medical promises.
 
   Respond in JSON format:
   {
     "extractedSymptoms": ["symptom1", "symptom2"],
     "followUpQuestions": ["question1", "question2"],
+    "reassurance": "Brief empathetic reassurance",
     "recommendedDoctors": [
       {
         "id": "doctor_id_1",
@@ -436,16 +559,43 @@ const analyzeSymptomsWithGroq = async (symptoms, previousAnswers = [], doctorLis
   }
   `;
 
-  const response = await groq.chat.completions.create({
-    messages: [{ role: "user", content: prompt }],
-    model: "llama-3.1-8b-instant",
-    temperature: 0.5,
-    max_tokens: 1024,
-    top_p: 0.9,
-    response_format: { type: "json_object" }
-  });
+  try {
+    const response = await groq.chat.completions.create({
+      messages: [{ role: "user", content: prompt }],
+      model: "llama-3.1-8b-instant",
+      temperature: 0.5,
+      max_tokens: 1024,
+      top_p: 0.9,
+      response_format: { type: "json_object" }
+    });
 
-  return JSON.parse(response.choices[0].message.content);
+    const result = JSON.parse(response.choices[0].message.content);
+    
+    // Format the response to be more human-like
+    if (result.recommendedDoctors && result.recommendedDoctors.length > 0) {
+      result.message = result.reassurance || "Based on what you've told me, I think these doctors might be able to help:";
+    } else if (result.followUpQuestions && result.followUpQuestions.length > 0) {
+      // Choose a random intro for the follow-up question
+      const intros = [
+        "I'd like to understand a bit more about what you're experiencing. ",
+        "To help you better, I need to know: ",
+        "If you don't mind me asking: ",
+        "It would help me to know: ",
+        ""  // Empty string for some variety
+      ];
+      
+      const randomIntro = intros[Math.floor(Math.random() * intros.length)];
+      result.followUpQuestions[0] = randomIntro + result.followUpQuestions[0];
+    }
+    
+    return result;
+  } catch (error) {
+    console.error("Error analyzing symptoms:", error);
+    return {
+      followUpQuestions: ["Could you tell me more about your symptoms?"],
+      recommendedDoctors: []
+    };
+  }
 };
 
 // ✅ Store Chat in MongoDB
@@ -474,28 +624,44 @@ const chatbotResponse = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: "User ID is required." });
   }
 
-  // ✅ If no message is provided, greet the user automatically
+  // ✅ If no message is provided, greet the user with personalization
   if (!message) {
-    await saveChatMessage(userId, "bot", "Hi, I'm CuraBot! How may I assist you today? You can ask me about doctor availability, your appointments, or describe your symptoms for a doctor recommendation.");
-    return res.status(200).json({ 
-      response: "Hi, I'm CuraBot! How may I assist you today? You can ask me about doctor availability, your appointments, or describe your symptoms for a doctor recommendation." 
-    });
-  }
-
-  // ✅ Retrieve chat history
-  let chat = await Chat.findOne({ userId });
-
-  if (!chat) {
-    chat = new Chat({ userId, messages: [] });
-    await saveChatMessage(userId, "bot", "Hi, I'm CuraBot! How may I assist you today? You can ask me about doctor availability, your appointments, or describe your symptoms for a doctor recommendation.");
+    try {
+      // Get user info for personalized greeting
+      const user = await User.findById(userId);
+      const greeting = user ? `Hi ${user.name}! I'm CuraBot!` : "Hi there! I'm CuraBot!";
+      
+      // Get time of day for more human-like greeting
+      const hour = new Date().getHours();
+      let timeGreeting = "";
+      
+      if (hour < 12) {
+        timeGreeting = "Good morning! ";
+      } else if (hour < 18) {
+        timeGreeting = "Good afternoon! ";
+      } else {
+        timeGreeting = "Good evening! ";
+      }
+      
+      const response = timeGreeting + greeting + " How can I assist you today?";
+      
+      await saveChatMessage(userId, "bot", response);
+      return res.status(200).json({ response });
+    } catch (error) {
+      console.error("Error generating greeting:", error);
+      const defaultGreeting = "Hi there! I'm CuraBot! How can I assist you today?";
+      
+      await saveChatMessage(userId, "bot", defaultGreeting);
+      return res.status(200).json({ response: defaultGreeting });
+    }
   }
 
   // ✅ Store user message in chat history
   await saveChatMessage(userId, "user", message);
 
-  // ✅ Process the user's query with enhanced capabilities
-  const response = await processUserQuery(userId, message, chat.messages);
-
+  // ✅ Process the user's query with enhanced capabilities (without relying on chat history)
+  const response = await processUserQuery(userId, message);
+  
   // ✅ Store bot response in chat history
   await saveChatMessage(userId, "bot", typeof response === 'object' ? JSON.stringify(response) : response);
 
