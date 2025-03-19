@@ -92,8 +92,32 @@ const cancelAppointment = async (req, res) => {
             return res.status(403).json({ message: "Unauthorized" });
         }
 
+        // Update appointment status
         appointment.status = "cancelled";
         await appointment.save();
+
+        // ✅ Update the schedule to mark the time slot as available again
+        const schedule = await Schedule.findOne({ 
+            doctorId: appointment.doctorId,
+            "availableSlots.date": appointment.date
+        });
+
+        if (schedule) {
+            const slotIndex = schedule.availableSlots.findIndex(slot => 
+                slot.date.toISOString() === new Date(appointment.date).toISOString()
+            );
+
+            if (slotIndex !== -1) {
+                const timeSlot = schedule.availableSlots[slotIndex].times.find(slot => 
+                    slot.time === appointment.time
+                );
+                
+                if (timeSlot) {
+                    timeSlot.isBooked = false;
+                    await schedule.save();
+                }
+            }
+        }
 
         res.status(200).json({ message: "Appointment cancelled successfully" });
     } catch (error) {
