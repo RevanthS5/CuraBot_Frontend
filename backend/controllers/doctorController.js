@@ -160,37 +160,80 @@ const getAppointmentsByDate = asyncHandler(async (req, res) => {
 const getPatientSummary = asyncHandler(async (req, res) => {
     try {
         const { appointmentId } = req.params;
+        
+        console.log(`Processing patient summary for appointment ID: ${appointmentId}`);
+        
+        // Validate appointmentId
+        if (!appointmentId || appointmentId === ':appointmentId') {
+            return res.status(400).json({ 
+                message: "Invalid appointment ID. Please provide a valid appointment ID." 
+            });
+        }
 
-        // ✅ Fetch the appointment & ensure it has a linked chatbot session
+        // Check if appointmentId is a valid ObjectId
+        if (!mongoose.Types.ObjectId.isValid(appointmentId)) {
+            return res.status(400).json({ 
+                message: "Invalid appointment ID format. Please provide a valid MongoDB ObjectId." 
+            });
+        }
+
+        // ✅ Fetch the appointment with populated patient details
         const appointment = await Appointment.findById(appointmentId)
-            .populate("patientId", "name email")
-            .populate("chatSessionId"); // 🔥 Fetch the linked chatbot session
+            .populate("patientId", "name email _id");
 
-        if (!appointment) return res.status(404).json({ message: "Appointment not found" });
-        if (!appointment.chatSessionId) return res.status(404).json({ message: "No chatbot session linked to this appointment" });
+        if (!appointment) {
+            console.log(`Appointment not found for ID: ${appointmentId}`);
+            return res.status(404).json({ message: "Appointment not found" });
+        }
+        
+        // Get patient ID from the appointment
+        const patientId = appointment.patientId._id;
+        console.log(`Found appointment for patient: ${appointment.patientId.name} (ID: ${patientId})`);
+        
+        // ✅ Fetch chat history for this patient by matching patientId with userId in Chat collection
+        console.log(`Looking for chat history with userId: ${patientId}`);
+        const chatHistory = await Chat.findOne({ userId: patientId });
+        
+        if (!chatHistory) {
+            console.log(`No chat history found for patient ID: ${patientId}`);
+            return res.status(404).json({ message: "No chat history found for this patient" });
+        }
+        
+        if (!chatHistory.messages || chatHistory.messages.length === 0) {
+            console.log(`Chat history found but no messages for patient ID: ${patientId}`);
+            return res.status(404).json({ message: "No chat messages found for this patient" });
+        }
+        
+        console.log(`Found ${chatHistory.messages.length} chat messages for patient`);
 
-        // ✅ Fetch chat history ONLY from the linked chatbot session
-        const chatHistory = appointment.chatSessionId;
-        if (!chatHistory) return res.status(404).json({ message: "No chatbot history found for this session" });
+        // Format chat messages for the AI prompt
+        const formattedChatHistory = chatHistory.messages.map(msg => ({
+            role: msg.sender === "user" ? "user" : "assistant",
+            content: msg.message
+        }));
 
         // 🔥 Use Groq AI to summarize patient chat
         const prompt = `
         Patient Name: ${appointment.patientId.name}
-        Chat History: ${JSON.stringify(chatHistory.messages)}
-
-        Generate a structured **short AI summary** of the patient's symptoms.
         
-        JSON format:
+        Based on the following chat history between a patient and a medical chatbot, 
+        generate a structured summary of the patient's symptoms and concerns.
+        
+        Please return the response in the following JSON format:
         {
-            "patientName": "John Doe",
-            "symptoms": ["Headache", "Dizziness"],
-            "possibleDiagnosis": "Migraine",
-            "additionalNotes": "Patient reports severe headaches in the morning."
+            "patientName": "${appointment.patientId.name}",
+            "symptoms": ["symptom1", "symptom2", ...],
+            "possibleDiagnosis": "potential diagnosis based on symptoms",
+            "additionalNotes": "any other relevant information from the chat"
         }
         `;
 
+        console.log(`Generating AI summary for patient: ${appointment.patientId.name}`);
         const response = await groq.chat.completions.create({
-            messages: [{ role: "user", content: prompt }],
+            messages: [
+                { role: "system", content: prompt },
+                ...formattedChatHistory.slice(-10) // Use the last 10 messages to stay within token limits
+            ],
             model: "llama-3.1-8b-instant",
             temperature: 0.3,
             max_tokens: 1024,
@@ -198,12 +241,22 @@ const getPatientSummary = asyncHandler(async (req, res) => {
             response_format: { type: "json_object" }
         });
 
-        const aiSummary = JSON.parse(response.choices[0].message.content);
+        let aiSummary;
+        try {
+            aiSummary = JSON.parse(response.choices[0].message.content);
+            console.log(`Successfully generated AI summary for patient: ${appointment.patientId.name}`);
+        } catch (parseError) {
+            console.error("Error parsing AI response:", parseError);
+            return res.status(500).json({ 
+                message: "Error parsing AI response", 
+                rawResponse: response.choices[0].message.content 
+            });
+        }
 
         res.status(200).json(aiSummary);
     } catch (error) {
         console.error("Error generating AI summary:", error);
-        res.status(500).json({ message: "Server Error" });
+        res.status(500).json({ message: "Server Error", error: error.message });
     }
 });
 
