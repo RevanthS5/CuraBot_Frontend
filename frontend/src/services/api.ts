@@ -112,13 +112,25 @@ export const doctorAPI = {
   getTodayAppointments: () => api.get('/doctors/appointments/today'),
   getAppointmentsByDate: (date: string) => api.get(`/doctors/appointments?date=${date}`),
   getPatientSummary: (appointmentId: string) => api.get(`/doctors/appointment/${appointmentId}/patient-summary`),
+  
+  // Doctor profile management
+  getDoctorProfile: () => {
+    const userId = JSON.parse(localStorage.getItem('user') || '{}').id;
+    return api.get(`/doctors/${userId}`);
+  },
 };
 
 export const scheduleAPI = {
   // Schedule routes from scheduleRoutes.js
   getDoctorAvailability: (doctorId: string) => api.get(`/schedule/${doctorId}`),
-  setDoctorAvailability: (data: any) => api.post('/schedule', data),
-  updateDoctorAvailability: (data: any) => api.patch('/schedule', data),
+  setDoctorAvailability: (data: { date: string, startTime: string, endTime: string, interval: number }) => 
+    api.post('/schedule', data),
+  updateDoctorAvailability: (data: { date: string, startTime: string, endTime: string, interval: number }) => 
+    api.patch('/schedule', data),
+  getDoctorScheduleOverview: () => {
+    const userId = JSON.parse(localStorage.getItem('user') || '{}').id;
+    return api.get(`/schedule/${userId}`);
+  },
 };
 
 export const patientAPI = {

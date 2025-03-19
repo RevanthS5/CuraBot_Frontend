@@ -106,20 +106,42 @@ try {
     console.error("❌ Failed to initialize Groq client:", error);
 }
 
-// ✅ Get Today’s Appointments for Doctor
+// ✅ Get Today's Appointments for Doctor
 const getTodayAppointments = asyncHandler(async (req, res) => {
     try {
-        const doctorId = req.user.id;
+        const doctorId = new mongoose.Types.ObjectId(req.user.id); // Ensure ObjectId type
+        
+        // Find the doctor document using userId
+        const doctor = await Doctor.findOne({ userId: doctorId });
+        
+        if (!doctor) {
+            return res.status(404).json({ message: "Doctor profile not found" });
+        }
+        
+        // Get today's date (in local timezone)
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-
+        
+        // Get tomorrow's date (in local timezone)
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        
+        console.log("Doctor ID:", doctor._id);
+        console.log("Querying for appointments between:", today, "and", tomorrow);
+        
+        // Use the doctor's _id field from the Doctor model
         const appointments = await Appointment.find({
-            doctorId,
-            date: { $gte: today, $lt: new Date(today.getTime() + 86400000) }
+            doctorId: doctor._id,
+            date: {
+                $gte: today,
+                $lt: tomorrow
+            }
         })
         .populate("patientId", "name email")
         .sort({ time: 1 });
-
+        
+        console.log("Found appointments:", appointments.length);
+        
         res.status(200).json(appointments);
     } catch (error) {
         console.error("Error fetching doctor's appointments:", error);
@@ -134,20 +156,39 @@ const getAppointmentsByDate = asyncHandler(async (req, res) => {
         
         if (!date) return res.status(400).json({ message: "Date is required" });
 
-        const doctorId = req.user.id; // Get doctor ID from authenticated user
-        if (!mongoose.Types.ObjectId.isValid(doctorId)) {
-            return res.status(400).json({ message: "Invalid doctor ID" });
+        const userId = req.user.id; // Get user ID from authenticated user
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({ message: "Invalid user ID" });
+        }
+
+        // Find the doctor document using userId
+        const doctor = await Doctor.findOne({ userId: new mongoose.Types.ObjectId(userId) });
+        
+        if (!doctor) {
+            return res.status(404).json({ message: "Doctor profile not found" });
         }
 
         const selectedDate = new Date(date);
         selectedDate.setHours(0, 0, 0, 0);
+        
+        // Get next day
+        const nextDay = new Date(selectedDate);
+        nextDay.setDate(nextDay.getDate() + 1);
+        
+        console.log("Doctor ID:", doctor._id);
+        console.log("Querying for appointments on date:", selectedDate, "to", nextDay);
 
         const appointments = await Appointment.find({
-            doctorId: new mongoose.Types.ObjectId(doctorId), // ✅ Convert doctorId to ObjectId
-            date: { $gte: selectedDate, $lt: new Date(selectedDate.getTime() + 86400000) }
+            doctorId: doctor._id,
+            date: { 
+                $gte: selectedDate, 
+                $lt: nextDay 
+            }
         })
         .populate("patientId", "name email")
         .sort({ time: 1 });
+        
+        console.log("Found appointments:", appointments.length);
 
         res.status(200).json(appointments);
     } catch (error) {
