@@ -49,7 +49,8 @@ const getAllDoctors = async (req, res) => {
 // ✅ Get Doctor by ID (Public)
 const getDoctorById = async (req, res) => {
     try {
-        const doctor = await Doctor.findById(req.params.id);
+        // Find doctor by userId instead of _id
+        const doctor = await Doctor.findOne({ userId: req.params.id });
         if (!doctor) return res.status(404).json({ message: "Doctor not found" });
 
         res.status(200).json(doctor);

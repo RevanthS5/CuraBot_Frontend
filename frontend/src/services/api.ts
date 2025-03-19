@@ -127,9 +127,28 @@ export const scheduleAPI = {
     api.post('/schedule', data),
   updateDoctorAvailability: (data: { date: string, startTime: string, endTime: string, interval: number }) => 
     api.patch('/schedule', data),
-  getDoctorScheduleOverview: () => {
-    const userId = JSON.parse(localStorage.getItem('user') || '{}').id;
-    return api.get(`/schedule/${userId}`);
+  // First get doctor profile to find doctorId, then get schedule
+  getDoctorScheduleOverview: async () => {
+    try {
+      // Get the user ID from localStorage
+      const userId = JSON.parse(localStorage.getItem('user') || '{}').id;
+      
+      // Get the doctor profile using userId (now the backend searches by userId)
+      const doctorResponse = await api.get(`/doctors/${userId}`);
+      
+      // Get the doctor's ID (the MongoDB document _id)
+      const doctorId = doctorResponse.data._id;
+      
+      // Then get the schedule using the doctor ID
+      return api.get(`/schedule/${doctorId}`);
+    } catch (error) {
+      console.error("Error fetching doctor schedule:", error);
+      throw error;
+    }
+  },
+  // Get appointments for a specific date (using doctor routes)
+  getAppointmentsByDate: (date: string) => {
+    return api.get(`/doctors/appointments?date=${date}`);
   },
 };
 

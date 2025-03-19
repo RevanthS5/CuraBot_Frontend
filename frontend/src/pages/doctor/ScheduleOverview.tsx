@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { scheduleAPI, doctorAPI } from '../../services/api';
+import { scheduleAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
 interface TimeSlot {
@@ -30,10 +30,9 @@ export default function ScheduleOverview() {
     const fetchSchedule = async () => {
       try {
         setLoading(true);
-        const doctorResponse = await doctorAPI.getDoctorProfile();
-        const doctorId = doctorResponse.data._id;
         
-        const scheduleResponse = await scheduleAPI.getDoctorAvailability(doctorId);
+        // Use the getDoctorScheduleOverview function which now handles getting the doctorId correctly
+        const scheduleResponse = await scheduleAPI.getDoctorScheduleOverview();
         setSchedule(scheduleResponse.data);
         
         // Set the first available date as selected by default
@@ -73,7 +72,7 @@ export default function ScheduleOverview() {
   const fetchAppointmentsForDate = async (date: string) => {
     try {
       const formattedDate = new Date(date).toISOString().split('T')[0];
-      const response = await doctorAPI.getAppointmentsByDate(formattedDate);
+      const response = await scheduleAPI.getAppointmentsByDate(formattedDate);
       setAppointments(response.data);
     } catch (err: any) {
       console.error('Error fetching appointments for date:', err);
@@ -186,57 +185,83 @@ export default function ScheduleOverview() {
         </select>
       </div>
 
-      <div className="bg-white shadow overflow-hidden sm:rounded-md">
-        <ul className="divide-y divide-gray-200">
-          {selectedDateSlots?.times.map((slot, index) => {
-            // Find if there's an appointment for this time slot
-            const appointment = appointments.find(app => app.time === slot.time);
-            
-            return (
-              <li key={index}>
-                <div className={`px-4 py-4 sm:px-6 ${slot.isBooked ? 'bg-gray-50' : ''}`}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <p className="text-sm font-medium text-blue-600 truncate">
+      {selectedDateSlots && (
+        <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+          <div className="px-4 py-5 sm:px-6 bg-gray-50">
+            <h3 className="text-lg leading-6 font-medium text-gray-900">
+              Schedule for {formatDate(selectedDate)}
+            </h3>
+            <p className="mt-1 max-w-2xl text-sm text-gray-500">
+              {selectedDateSlots.times.length} time slots available
+            </p>
+          </div>
+          
+          <div className="border-t border-gray-200">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-4">
+              {selectedDateSlots.times.map((slot, index) => {
+                // Find if there's an appointment for this time slot
+                const appointment = appointments.find(app => app.time === slot.time);
+                
+                return (
+                  <div 
+                    key={index} 
+                    className={`p-4 rounded-lg border ${
+                      slot.isBooked 
+                        ? 'bg-yellow-50 border-yellow-200' 
+                        : 'bg-green-50 border-green-200'
+                    }`}
+                  >
+                    <div className="flex justify-between items-center mb-2">
+                      <h4 className="text-lg font-medium">
                         {formatTime(slot.time)}
-                      </p>
+                      </h4>
+                      <span 
+                        className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                          slot.isBooked 
+                            ? 'bg-yellow-100 text-yellow-800' 
+                            : 'bg-green-100 text-green-800'
+                        }`}
+                      >
+                        {slot.isBooked ? 'Booked' : 'Available'}
+                      </span>
                     </div>
-                    <div>
-                      {slot.isBooked ? (
-                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                          Booked
-                        </span>
-                      ) : (
-                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                          Available
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {appointment && (
-                    <div className="mt-2 sm:flex sm:justify-between">
-                      <div className="sm:flex">
-                        <p className="flex items-center text-sm text-gray-500">
-                          <svg className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    
+                    {appointment && (
+                      <div className="mt-2 pt-2 border-t border-gray-200">
+                        <div className="flex items-center text-sm text-gray-600 mb-1">
+                          <svg className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                             <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
                           </svg>
-                          {appointment.patientId.name}
-                        </p>
+                          <span className="font-medium">{appointment.patientId?.name || 'Unknown Patient'}</span>
+                        </div>
+                        
+                        {appointment.patientId?.email && (
+                          <div className="flex items-center text-sm text-gray-500 mb-2">
+                            <svg className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                              <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                              <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                            </svg>
+                            <span>{appointment.patientId.email}</span>
+                          </div>
+                        )}
+                        
+                        <div className="mt-2 flex justify-end">
+                          <a
+                            href={`/doctor/appointment/${appointment._id}`}
+                            className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                          >
+                            View Details →
+                          </a>
+                        </div>
                       </div>
-                      <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
-                        <p>
-                          {appointment.reason}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
