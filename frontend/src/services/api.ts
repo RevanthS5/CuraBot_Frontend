@@ -107,11 +107,10 @@ export const doctorAPI = {
   // Doctor routes from doctorRoutes.js
   getAllDoctors: () => api.get('/doctors'),
   getDoctorById: (id: string) => api.get(`/doctors/${id}`),
-  
-  // Doctor-specific appointment routes
   getTodayAppointments: () => api.get('/doctors/appointments/today'),
   getAppointmentsByDate: (date: string) => api.get(`/doctors/appointments?date=${date}`),
-  getPatientSummary: (appointmentId: string) => api.get(`/doctors/appointment/${appointmentId}/patient-summary`),
+  // getPatientSummary: (appointmentId: string) => api.get(`/doctors/appointment/${appointmentId}/patient-summary`),
+  getAppointmentDetails: (appointmentId: string) => api.get(`/doctors/appointment/${appointmentId}/patient-summary`),
   
   // Doctor profile management
   getDoctorProfile: () => {
