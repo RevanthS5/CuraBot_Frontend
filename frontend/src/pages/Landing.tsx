@@ -27,7 +27,7 @@ export default function Landing() {
           <div className="flex justify-between items-center h-20">
             <div className="flex items-center">
               <Activity className="h-8 w-8 text-primary-600" />
-              <span className="ml-2 text-2xl font-bold bg-gradient-to-r from-primary-600 to-secondary-500 bg-clip-text text-transparent">CuraBot</span>
+              <span className="ml-2 text-2xl font-bold bg-gradient-to-r from-primary-600 to-secondary-500 bg-clip-text text-transparent">CuraBot-Redefined</span>
             </div>
             <div className="hidden md:flex items-center space-x-8">
               <a href="#features" className="text-gray-600 hover:text-primary-600 transition-colors">Features</a>
@@ -228,19 +228,19 @@ export default function Landing() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               {
-                name: "Sarah Johnson",
+                name: "Shylaja M S",
                 role: "Patient",
                 image: "https://randomuser.me/api/portraits/women/32.jpg",
                 quote: "CuraBot has made managing my healthcare so much easier. I can book appointments and access my records anytime!"
               },
               {
-                name: "Dr. Michael Chen",
-                role: "Cardiologist",
+                name: "Dr. Deepak Rudrappa",
+                role: "Consultant Orthopaedic Surgeon",
                 image: "https://randomuser.me/api/portraits/men/54.jpg",
                 quote: "As a doctor, CuraBot helps me organize my schedule and provide better care to my patients with its comprehensive tools."
               },
               {
-                name: "Emily Rodriguez",
+                name: "Anandita",
                 role: "Hospital Administrator",
                 image: "https://randomuser.me/api/portraits/women/68.jpg",
                 quote: "The administrative features have streamlined our operations and improved efficiency across our entire facility."

@@ -50,7 +50,7 @@ export default function Navbar() {
               
               {user.role === 'admin' && (
                 <>
-                  <Link to="/admin" className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium">
+                  {/* <Link to="/admin" className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium">
                     Dashboard
                   </Link>
                   <Link to="/admin/doctors" className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium">
@@ -58,7 +58,7 @@ export default function Navbar() {
                   </Link>
                   <Link to="/admin/patients" className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium">
                     Patients
-                  </Link>
+                  </Link> */}
                 </>
               )}
             </div>
