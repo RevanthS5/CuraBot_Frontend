@@ -206,7 +206,7 @@ export default function TodayAppointments() {
                         className="inline-flex items-center text-primary-600 hover:text-primary-900 transition-colors"
                       >
                         <FileText className="h-4 w-4 mr-1" />
-                        View Details
+                        AI Summary
                       </Link>
                     </td>
                   </motion.tr>

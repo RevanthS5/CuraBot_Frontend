@@ -39,12 +39,12 @@ export default function Navbar() {
               
               {user.role === 'doctor' && (
                 <>
-                  <Link to="/doctor" className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium">
+                  {/* <Link to="/doctor" className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium">
                     Dashboard
                   </Link>
                   <Link to="/doctor/schedule" className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium">
                     Schedule
-                  </Link>
+                  </Link> */}
                 </>
               )}
               
