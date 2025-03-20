@@ -111,6 +111,7 @@ export const doctorAPI = {
   getAppointmentsByDate: (date: string) => api.get(`/doctors/appointments?date=${date}`),
   // getPatientSummary: (appointmentId: string) => api.get(`/doctors/appointment/${appointmentId}/patient-summary`),
   getAppointmentDetails: (appointmentId: string) => api.get(`/doctors/appointment/${appointmentId}/patient-summary`),
+  updateDoctor: (id: string, data: any) => api.patch(`/doctors/${id}`, data),
   
   // Doctor profile management
   getDoctorProfile: () => {
@@ -167,9 +168,9 @@ export const adminAPI = {
   getAllDoctors: () => api.get('/doctors'),
   getDoctorById: (id: string) => api.get(`/doctors/${id}`),
   getAllPatients: () => api.get('/admin/patients'),
-  addDoctor: (data: any) => api.patch('/admin/doctors/add', data),
-  updateDoctor: (id: string, data: any) => api.patch(`/admin/doctors/update/${id}`, data),
-  deleteDoctor: (id: string) => api.delete(`/admin/doctors/delete/${id}`),
+  addDoctor: (data: any) => api.post('/admin/doctors/add', data),
+  updateDoctor: (id: string, data: any) => api.patch(`/doctors/${id}`, data),
+  deleteDoctor: (id: string) => api.delete(`/doctors/${id}`),
   
   // Doctor schedule
   getDoctorSchedule: (doctorId: string) => api.get(`/admin/doctor-schedule/${doctorId}`),

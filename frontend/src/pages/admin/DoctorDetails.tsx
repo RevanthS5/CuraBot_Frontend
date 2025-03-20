@@ -1,22 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Calendar } from 'lucide-react';
-import { adminAPI } from '../../services/api';
+import { adminAPI, doctorAPI } from '../../services/api';
 
 interface Doctor {
   _id: string;
-  userId: {
-    _id: string;
-    name: string;
-    email: string;
-    phone: string;
-  };
-  specialization: string;
-  experience: number;
-  bio: string;
-  consultationFee: number;
-  rating?: number;
-  isAvailable: boolean;
+  userId: string;
+  name: string;
+  profilePic?: string;
+  speciality: string;
+  qualification: string;
+  overview: string;
+  expertise: string[];
+  createdAt: string;
 }
 
 interface Schedule {
@@ -43,13 +39,10 @@ export default function DoctorDetails() {
   // Form state for editing doctor
   const [formData, setFormData] = useState({
     name: '',
-    email: '',
-    phone: '',
-    specialization: '',
-    experience: '',
-    bio: '',
-    consultationFee: '',
-    isAvailable: true,
+    speciality: '',
+    qualification: '',
+    overview: '',
+    profilePic: '',
   });
 
   useEffect(() => {
@@ -58,19 +51,17 @@ export default function DoctorDetails() {
     const fetchDoctorDetails = async () => {
       try {
         setIsLoading(true);
-        const response = await adminAPI.getDoctorById(id);
+        // Here we're using the userId to fetch doctor details
+        const response = await doctorAPI.getDoctorById(id);
         setDoctor(response.data);
         
         // Initialize form data
         setFormData({
-          name: response.data.userId.name,
-          email: response.data.userId.email,
-          phone: response.data.userId.phone,
-          specialization: response.data.specialization,
-          experience: response.data.experience.toString(),
-          bio: response.data.bio,
-          consultationFee: response.data.consultationFee.toString(),
-          isAvailable: response.data.isAvailable,
+          name: response.data.name || '',
+          speciality: response.data.speciality || '',
+          qualification: response.data.qualification || '',
+          overview: response.data.overview || '',
+          profilePic: response.data.profilePic || '',
         });
         
         setIsLoading(false);
@@ -98,14 +89,8 @@ export default function DoctorDetails() {
   }, [id]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target;
-    
-    if (type === 'checkbox') {
-      const target = e.target as HTMLInputElement;
-      setFormData({ ...formData, [name]: target.checked });
-    } else {
-      setFormData({ ...formData, [name]: value });
-    }
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -119,16 +104,14 @@ export default function DoctorDetails() {
       
       const updateData = {
         name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        specialization: formData.specialization,
-        experience: parseInt(formData.experience),
-        bio: formData.bio,
-        consultationFee: parseFloat(formData.consultationFee),
-        isAvailable: formData.isAvailable,
+        speciality: formData.speciality,
+        qualification: formData.qualification,
+        overview: formData.overview,
+        profilePic: formData.profilePic,
       };
       
-      await adminAPI.updateDoctor(id, updateData);
+      // Use doctorAPI instead of adminAPI for updating doctor details
+      await doctorAPI.updateDoctor(id, updateData);
       
       setSuccessMessage('Doctor information updated successfully');
       setIsSaving(false);
@@ -213,6 +196,16 @@ export default function DoctorDetails() {
 
       <div className="bg-white shadow rounded-lg overflow-hidden">
         <div className="p-6">
+          {doctor.profilePic && (
+            <div className="mb-6 flex justify-center">
+              <img 
+                src={doctor.profilePic} 
+                alt={doctor.name} 
+                className="h-48 w-48 object-cover rounded-full border-4 border-gray-200"
+              />
+            </div>
+          )}
+          
           <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
@@ -228,35 +221,22 @@ export default function DoctorDetails() {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Specialization</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Profile Picture URL</label>
                 <input
                   type="text"
-                  name="specialization"
-                  value={formData.specialization}
+                  name="profilePic"
+                  value={formData.profilePic}
+                  onChange={handleInputChange}
+                  className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Speciality</label>
+                <input
+                  type="text"
+                  name="speciality"
+                  value={formData.speciality}
                   onChange={handleInputChange}
                   className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   required
@@ -264,23 +244,11 @@ export default function DoctorDetails() {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Experience (years)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Qualification</label>
                 <input
-                  type="number"
-                  name="experience"
-                  value={formData.experience}
-                  onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Consultation Fee ($)</label>
-                <input
-                  type="number"
-                  name="consultationFee"
-                  value={formData.consultationFee}
+                  type="text"
+                  name="qualification"
+                  value={formData.qualification}
                   onChange={handleInputChange}
                   className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   required
@@ -288,26 +256,35 @@ export default function DoctorDetails() {
               </div>
               
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Overview</label>
                 <textarea
-                  name="bio"
-                  value={formData.bio}
+                  name="overview"
+                  value={formData.overview}
                   onChange={handleInputChange}
-                  rows={4}
+                  rows={6}
                   className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   required
                 />
               </div>
               
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  name="isAvailable"
-                  checked={formData.isAvailable}
-                  onChange={(e) => setFormData({ ...formData, isAvailable: e.target.checked })}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label className="ml-2 block text-sm text-gray-900">Available for appointments</label>
+              {doctor.expertise && doctor.expertise.length > 0 && (
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Expertise</label>
+                  <div className="bg-gray-50 p-3 rounded-md">
+                    {doctor.expertise.map((item, index) => (
+                      <div key={index} className="mb-2 text-sm text-gray-700">
+                        • {item}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">User ID</label>
+                <div className="bg-gray-50 p-3 rounded-md text-sm text-gray-700">
+                  {doctor.userId}
+                </div>
               </div>
             </div>
             

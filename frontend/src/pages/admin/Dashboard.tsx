@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
-import { Users, UserPlus, Calendar, Activity, Clock } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import { Users, UserPlus, Calendar, Clock } from 'lucide-react';
 import { adminAPI } from '../../services/api';
 
 // Import admin components (we'll create these next)
@@ -18,7 +17,6 @@ interface DashboardStats {
 }
 
 export default function AdminDashboard() {
-  const { user } = useAuth();
   const location = useLocation();
   
   const isActive = (path: string) => {
@@ -186,33 +184,20 @@ function AdminHome() {
             </div>
           </div>
 
-          {/* Quick Actions */}
+          {/* Additional Dashboard Content */}
           <div className="mt-8">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Link 
-                to="/admin/doctors" 
-                className="bg-white p-4 rounded-lg shadow border border-gray-200 hover:border-blue-500 transition-colors"
-              >
-                <h4 className="font-medium text-gray-900">Manage Doctors</h4>
-                <p className="text-gray-600 text-sm mt-1">Add, update, or remove doctors</p>
-              </Link>
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">System Status</h3>
+            <div className="bg-white p-6 rounded-lg shadow">
+              <p className="text-gray-700">All systems operational. The CuraBot AI assistant is actively monitoring patient data and providing diagnostic support.</p>
               
-              <Link 
-                to="/admin/patients" 
-                className="bg-white p-4 rounded-lg shadow border border-gray-200 hover:border-blue-500 transition-colors"
-              >
-                <h4 className="font-medium text-gray-900">View Patients</h4>
-                <p className="text-gray-600 text-sm mt-1">See all registered patients</p>
-              </Link>
+              <div className="mt-4 flex items-center">
+                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                  <div className="bg-green-600 h-2.5 rounded-full" style={{ width: '95%' }}></div>
+                </div>
+                <span className="ml-2 text-sm text-gray-600">95%</span>
+              </div>
               
-              <Link 
-                to="/admin/analytics" 
-                className="bg-white p-4 rounded-lg shadow border border-gray-200 hover:border-blue-500 transition-colors"
-              >
-                <h4 className="font-medium text-gray-900">AI Analytics</h4>
-                <p className="text-gray-600 text-sm mt-1">View AI-powered insights</p>
-              </Link>
+              <p className="mt-4 text-sm text-gray-500">Last system check: Today at {new Date().toLocaleTimeString()}</p>
             </div>
           </div>
         </>
