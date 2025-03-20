@@ -274,7 +274,7 @@ function PatientHome() {
                     {formatDate(upcomingAppointment.date)} at {upcomingAppointment.time}
                   </span>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900">Dr. {upcomingAppointment.doctorId?.name || 'Unknown'}</h3>
+                <h3 className="text-lg font-semibold text-gray-900"> {upcomingAppointment.doctorId?.name || 'Unknown'}</h3>
                 <p className="text-primary-600 text-sm font-medium">{upcomingAppointment.doctorId?.specialization || 'Specialist'}</p>
                 
                 <div className="mt-5 flex space-x-3">
