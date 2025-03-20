@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Calendar } from 'lucide-react';
+import { ArrowLeft, Save, Calendar, User, Award, Briefcase, FileText, Clock, CheckCircle, X } from 'lucide-react';
 import { adminAPI, doctorAPI } from '../../services/api';
+import { motion } from 'framer-motion';
 
 interface Doctor {
   _id: string;
@@ -130,7 +131,7 @@ export default function DoctorDetails() {
   if (isLoading) {
     return (
       <div className="p-6 flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
       </div>
     );
   }
@@ -138,16 +139,24 @@ export default function DoctorDetails() {
   if (error && !doctor) {
     return (
       <div className="p-6">
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative" role="alert">
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg relative" 
+          role="alert"
+        >
           <span className="block sm:inline">{error}</span>
-        </div>
-        <button
+        </motion.div>
+        <motion.button
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
           onClick={() => navigate('/admin/doctors')}
-          className="mt-4 flex items-center text-blue-600 hover:text-blue-800"
+          className="mt-4 flex items-center text-primary-600 hover:text-primary-800 transition-colors"
         >
           <ArrowLeft className="h-4 w-4 mr-1" />
           Back to Doctors
-        </button>
+        </motion.button>
       </div>
     );
   }
@@ -155,204 +164,333 @@ export default function DoctorDetails() {
   if (!doctor) {
     return (
       <div className="p-6">
-        <div className="text-center py-12 text-gray-500">
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center py-12 text-gray-500"
+        >
           Doctor not found.
-        </div>
-        <button
+        </motion.div>
+        <motion.button
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
           onClick={() => navigate('/admin/doctors')}
-          className="mt-4 flex items-center text-blue-600 hover:text-blue-800"
+          className="mt-4 flex items-center text-primary-600 hover:text-primary-800 transition-colors"
         >
           <ArrowLeft className="h-4 w-4 mr-1" />
           Back to Doctors
-        </button>
+        </motion.button>
       </div>
     );
   }
 
   return (
     <div className="p-6">
-      <div className="flex items-center mb-6">
+      <motion.div 
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex items-center mb-6"
+      >
         <button
           onClick={() => navigate('/admin/doctors')}
-          className="flex items-center text-blue-600 hover:text-blue-800 mr-4"
+          className="flex items-center text-primary-600 hover:text-primary-800 transition-colors mr-4"
         >
           <ArrowLeft className="h-4 w-4 mr-1" />
           Back
         </button>
-        <h2 className="text-xl font-semibold text-gray-800">Doctor Details</h2>
-      </div>
+        <h2 className="text-xl font-semibold text-gray-800 flex items-center">
+          <User className="h-5 w-5 mr-2 text-primary-500" />
+          Doctor Details
+        </h2>
+      </motion.div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg relative mb-4" 
+          role="alert"
+        >
           <span className="block sm:inline">{error}</span>
-        </div>
+        </motion.div>
       )}
 
       {successMessage && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg relative mb-4" 
+          role="alert"
+        >
           <span className="block sm:inline">{successMessage}</span>
-        </div>
+        </motion.div>
       )}
 
-      <div className="bg-white shadow rounded-lg overflow-hidden">
-        <div className="p-6">
-          {doctor.profilePic && (
-            <div className="mb-6 flex justify-center">
-              <img 
-                src={doctor.profilePic} 
-                alt={doctor.name} 
-                className="h-48 w-48 object-cover rounded-full border-4 border-gray-200"
-              />
-            </div>
-          )}
-          
-          <form onSubmit={handleSubmit}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Profile Picture URL</label>
-                <input
-                  type="text"
-                  name="profilePic"
-                  value={formData.profilePic}
-                  onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Speciality</label>
-                <input
-                  type="text"
-                  name="speciality"
-                  value={formData.speciality}
-                  onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Qualification</label>
-                <input
-                  type="text"
-                  name="qualification"
-                  value={formData.qualification}
-                  onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  required
-                />
-              </div>
-              
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Overview</label>
-                <textarea
-                  name="overview"
-                  value={formData.overview}
-                  onChange={handleInputChange}
-                  rows={6}
-                  className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  required
-                />
-              </div>
-              
-              {doctor.expertise && doctor.expertise.length > 0 && (
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Expertise</label>
-                  <div className="bg-gray-50 p-3 rounded-md">
-                    {doctor.expertise.map((item, index) => (
-                      <div key={index} className="mb-2 text-sm text-gray-700">
-                        • {item}
-                      </div>
-                    ))}
-                  </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3 }}
+          className="lg:col-span-2"
+        >
+          <div className="bg-white shadow-md rounded-lg overflow-hidden border border-gray-200">
+            <div className="p-6">
+              {doctor.profilePic && (
+                <div className="mb-6 flex justify-center">
+                  <img 
+                    src={doctor.profilePic} 
+                    alt={doctor.name} 
+                    className="h-32 w-32 rounded-full object-cover border-4 border-primary-100 shadow-md"
+                  />
                 </div>
               )}
               
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">User ID</label>
-                <div className="bg-gray-50 p-3 rounded-md text-sm text-gray-700">
-                  {doctor.userId}
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 flex items-center">
+                      <User className="h-4 w-4 mr-1 text-gray-400" />
+                      Name
+                    </label>
+                    <input
+                      type="text"
+                      id="name"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleInputChange}
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="speciality" className="block text-sm font-medium text-gray-700 flex items-center">
+                      <Award className="h-4 w-4 mr-1 text-gray-400" />
+                      Speciality
+                    </label>
+                    <input
+                      type="text"
+                      id="speciality"
+                      name="speciality"
+                      value={formData.speciality}
+                      onChange={handleInputChange}
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label htmlFor="qualification" className="block text-sm font-medium text-gray-700 flex items-center">
+                    <Briefcase className="h-4 w-4 mr-1 text-gray-400" />
+                    Qualification
+                  </label>
+                  <input
+                    type="text"
+                    id="qualification"
+                    name="qualification"
+                    value={formData.qualification}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="profilePic" className="block text-sm font-medium text-gray-700 flex items-center">
+                    <FileText className="h-4 w-4 mr-1 text-gray-400" />
+                    Profile Picture URL
+                  </label>
+                  <input
+                    type="text"
+                    id="profilePic"
+                    name="profilePic"
+                    value={formData.profilePic}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                    placeholder="https://example.com/image.jpg"
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="overview" className="block text-sm font-medium text-gray-700 flex items-center">
+                    <FileText className="h-4 w-4 mr-1 text-gray-400" />
+                    Overview
+                  </label>
+                  <textarea
+                    id="overview"
+                    name="overview"
+                    rows={4}
+                    value={formData.overview}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  />
+                </div>
+                
+                <div className="flex justify-end">
+                  <button
+                    type="submit"
+                    disabled={isSaving}
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-gradient-to-r from-primary-600 to-secondary-600 hover:from-primary-700 hover:to-secondary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-all"
+                  >
+                    {isSaving ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="h-4 w-4 mr-2" />
+                        Save Changes
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </motion.div>
+
+        <motion.div 
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+          className="lg:col-span-1"
+        >
+          <div className="bg-white shadow-md rounded-lg overflow-hidden border border-gray-200">
+            <div className="bg-gradient-to-r from-primary-50 to-secondary-50 px-4 py-3 border-b border-gray-200">
+              <h3 className="text-lg font-medium text-gray-800 flex items-center">
+                <Calendar className="h-5 w-5 mr-2 text-primary-500" />
+                Upcoming Schedule
+              </h3>
+            </div>
+            
+            <div className="p-4">
+              {isScheduleLoading ? (
+                <div className="flex justify-center items-center h-32">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600"></div>
+                </div>
+              ) : schedule.length === 0 ? (
+                <div className="text-center py-6 text-gray-500">
+                  No scheduled appointments found.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {schedule
+                    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                    .slice(0, 3) // Show only the next 3 dates
+                    .map((scheduleItem) => (
+                      <motion.div 
+                        key={scheduleItem._id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="border border-gray-200 rounded-md p-3 bg-white shadow-sm hover:shadow-md transition-shadow"
+                      >
+                        <div className="flex justify-between items-center mb-2">
+                          <div className="flex items-center">
+                            <Calendar className="h-4 w-4 text-primary-500 mr-2" />
+                            <span className="font-medium text-gray-800">
+                              {new Date(scheduleItem.date).toLocaleDateString('en-US', {
+                                weekday: 'short',
+                                month: 'short',
+                                day: 'numeric'
+                              })}
+                            </span>
+                          </div>
+                          <span className="text-xs bg-primary-100 text-primary-800 px-2 py-1 rounded-full">
+                            {scheduleItem.slots.length} slots
+                          </span>
+                        </div>
+                        
+                        <div className="grid grid-cols-3 gap-2 mt-2">
+                          {scheduleItem.slots.slice(0, 6).map((slot, index) => (
+                            <div 
+                              key={index}
+                              className={`text-xs px-2 py-1 rounded-md flex items-center justify-center ${
+                                slot.isBooked 
+                                  ? 'bg-red-100 text-red-800 border border-red-200' 
+                                  : 'bg-green-100 text-green-800 border border-green-200'
+                              }`}
+                            >
+                              {slot.isBooked ? (
+                                <X className="h-3 w-3 mr-1" />
+                              ) : (
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                              )}
+                              {slot.time}
+                            </div>
+                          ))}
+                          
+                          {scheduleItem.slots.length > 6 && (
+                            <div className="text-xs px-2 py-1 rounded-md flex items-center justify-center bg-gray-100 text-gray-800 border border-gray-200">
+                              +{scheduleItem.slots.length - 6} more
+                            </div>
+                          )}
+                        </div>
+                      </motion.div>
+                    ))}
+                    
+                  <div className="text-center pt-2">
+                    <button className="text-primary-600 hover:text-primary-800 text-sm font-medium transition-colors">
+                      View Full Schedule
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.2 }}
+            className="bg-white shadow-md rounded-lg overflow-hidden border border-gray-200 mt-6"
+          >
+            <div className="bg-gradient-to-r from-secondary-50 to-primary-50 px-4 py-3 border-b border-gray-200">
+              <h3 className="text-lg font-medium text-gray-800 flex items-center">
+                <Clock className="h-5 w-5 mr-2 text-secondary-500" />
+                Account Information
+              </h3>
+            </div>
+            
+            <div className="p-4">
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-500">Doctor ID:</span>
+                  <span className="text-sm font-medium text-gray-800">{doctor._id}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-500">User ID:</span>
+                  <span className="text-sm font-medium text-gray-800">{doctor.userId}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-500">Created:</span>
+                  <span className="text-sm font-medium text-gray-800">
+                    {new Date(doctor.createdAt).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric'
+                    })}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-500">Expertise:</span>
+                  <div className="text-right">
+                    {doctor.expertise && doctor.expertise.length > 0 ? (
+                      doctor.expertise.map((exp, index) => (
+                        <span key={index} className="text-sm font-medium text-gray-800 block">
+                          {exp}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-sm text-gray-400">None specified</span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-            
-            <div className="mt-6 flex justify-end">
-              <button
-                type="submit"
-                disabled={isSaving}
-                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-400"
-              >
-                {isSaving ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    Save Changes
-                  </>
-                )}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-
-      {/* Doctor Schedule Section */}
-      <div className="mt-8">
-        <div className="flex items-center mb-4">
-          <Calendar className="h-5 w-5 text-gray-500 mr-2" />
-          <h3 className="text-lg font-medium text-gray-800">Doctor Schedule</h3>
-        </div>
-        
-        {isScheduleLoading ? (
-          <div className="flex justify-center items-center h-32">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          </div>
-        ) : schedule.length === 0 ? (
-          <div className="bg-white p-6 rounded-lg shadow text-center">
-            <p className="text-gray-500">No schedule information available for this doctor.</p>
-          </div>
-        ) : (
-          <div className="bg-white p-6 rounded-lg shadow">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {schedule.map((day) => (
-                <div key={day._id} className="border rounded-lg p-4">
-                  <h4 className="font-medium text-gray-900 mb-2">
-                    {new Date(day.date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
-                  </h4>
-                  <div className="space-y-2">
-                    {day.slots.map((slot, index) => (
-                      <div 
-                        key={index}
-                        className={`text-sm py-1 px-2 rounded ${
-                          slot.isBooked 
-                            ? 'bg-red-100 text-red-800' 
-                            : 'bg-green-100 text-green-800'
-                        }`}
-                      >
-                        {slot.time} - {slot.isBooked ? 'Booked' : 'Available'}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+          </motion.div>
+        </motion.div>
       </div>
     </div>
   );

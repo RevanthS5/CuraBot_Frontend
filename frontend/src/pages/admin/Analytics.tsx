@@ -4,7 +4,9 @@ import {
   PieChart, Pie, Cell, AreaChart, Area, ComposedChart, Line
 } from 'recharts';
 import { adminAPI } from '../../services/api';
-import { Calendar, Clock, AlertTriangle, TrendingUp, Users, Activity, Award } from 'lucide-react';
+import { Calendar, Clock, AlertTriangle, TrendingUp, Users, Activity, Award, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 
 interface DoctorAvailability {
   _id: string;
@@ -36,9 +38,91 @@ interface AnalyticsResponse {
   aiInsights: AIInsights;
 }
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FFC658', '#FF6B6B', '#4ECDC4', '#556270'];
+// Theme-aligned color palette
+const THEME_COLORS = {
+  primary: {
+    light: '#E0F2FE', // primary-100
+    medium: '#38BDF8', // primary-400
+    default: '#0EA5E9', // primary-500
+    dark: '#0369A1', // primary-700
+  },
+  secondary: {
+    light: '#F0FDFA', // secondary-100
+    medium: '#5EEAD4', // secondary-400
+    default: '#14B8A6', // secondary-500
+    dark: '#0F766E', // secondary-700
+  },
+  accent: {
+    yellow: '#FEF3C7', // amber-100
+    yellowDark: '#F59E0B', // amber-500
+    purple: '#F3E8FF', // purple-100
+    purpleDark: '#9333EA', // purple-600
+    pink: '#FCE7F3', // pink-100
+    pinkDark: '#DB2777', // pink-600
+  },
+  neutral: {
+    gray1: '#F3F4F6', // gray-100
+    gray2: '#E5E7EB', // gray-200
+    gray3: '#D1D5DB', // gray-300
+    gray4: '#9CA3AF', // gray-400
+    gray5: '#6B7280', // gray-500
+    gray6: '#4B5563', // gray-600
+  },
+  status: {
+    success: '#10B981', // green-500
+    warning: '#F59E0B', // amber-500
+    error: '#EF4444', // red-500
+    info: '#3B82F6', // blue-500
+  }
+};
+
+// Chart colors in theme
+const CHART_COLORS = [
+  THEME_COLORS.primary.default,
+  THEME_COLORS.secondary.default,
+  THEME_COLORS.accent.yellowDark,
+  THEME_COLORS.accent.purpleDark,
+  THEME_COLORS.accent.pinkDark,
+  THEME_COLORS.status.success,
+  THEME_COLORS.status.info,
+  THEME_COLORS.status.warning,
+  THEME_COLORS.status.error,
+  THEME_COLORS.neutral.gray5,
+];
+
+// Custom tooltip styles
+const CustomTooltipStyle = {
+  backgroundColor: 'white',
+  border: `1px solid ${THEME_COLORS.neutral.gray3}`,
+  borderRadius: '0.375rem',
+  padding: '0.75rem',
+  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+};
+
+// Custom tooltip component
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div style={CustomTooltipStyle}>
+        <p className="font-medium text-gray-800">{label}</p>
+        {payload.map((entry: any, index: number) => (
+          <div key={`tooltip-${index}`} className="flex items-center mt-1">
+            <div 
+              className="w-3 h-3 mr-2 rounded-full" 
+              style={{ backgroundColor: entry.color }}
+            />
+            <span className="text-sm text-gray-600">{entry.name}: </span>
+            <span className="text-sm font-medium ml-1 text-gray-800">{entry.value}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
 
 export default function Analytics() {
+  const navigate = useNavigate();
   const [analyticsData, setAnalyticsData] = useState<AnalyticsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -82,9 +166,9 @@ export default function Analytics() {
     const pendingAppointments = totalAppointments - (cancelledAppointments + completedAppointments);
     
     return [
-      { name: 'Completed', value: completedAppointments },
-      { name: 'Cancelled', value: cancelledAppointments },
-      { name: 'Pending', value: pendingAppointments }
+      { name: 'Completed', value: completedAppointments, color: THEME_COLORS.status.success },
+      { name: 'Cancelled', value: cancelledAppointments, color: THEME_COLORS.status.error },
+      { name: 'Pending', value: pendingAppointments, color: THEME_COLORS.status.warning }
     ];
   };
 
@@ -118,54 +202,84 @@ export default function Analytics() {
 
   return (
     <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold text-gray-800">AI Analytics Dashboard</h2>
-        <div className="flex space-x-2">
+      <motion.div 
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 space-y-4 sm:space-y-0"
+      >
+        <div className="flex items-center">
           <button
+            onClick={() => navigate('/admin')}
+            className="flex items-center text-primary-600 hover:text-primary-800 transition-colors mr-4"
+          >
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Back
+          </button>
+          <h2 className="text-xl font-semibold text-gray-800 flex items-center">
+            <TrendingUp className="h-5 w-5 mr-2 text-primary-500" />
+            AI Analytics Dashboard
+          </h2>
+        </div>
+        <div className="flex space-x-2">
+          <motion.button
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
             onClick={() => setPeriod('day')}
-            className={`px-4 py-2 rounded-md text-sm font-medium ${
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
               period === 'day'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                ? 'bg-gradient-to-r from-primary-600 to-secondary-600 text-white shadow-md'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
             Today
-          </button>
-          <button
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
             onClick={() => setPeriod('week')}
-            className={`px-4 py-2 rounded-md text-sm font-medium ${
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
               period === 'week'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                ? 'bg-gradient-to-r from-primary-600 to-secondary-600 text-white shadow-md'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
             This Week
-          </button>
+          </motion.button>
         </div>
-      </div>
+      </motion.div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg relative mb-4" 
+          role="alert"
+        >
           <span className="block sm:inline">{error}</span>
-        </div>
+        </motion.div>
       )}
 
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
         </div>
       ) : !analyticsData?.aiInsights ? (
-        <div className="bg-white p-6 rounded-lg shadow text-center">
+        <div className="bg-white p-6 rounded-lg shadow-md text-center">
           <p className="text-gray-500">No analytics data available for the selected period.</p>
         </div>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-6">
           {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white p-4 rounded-lg shadow border-l-4 border-blue-500">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+          >
+            <div className="bg-white p-4 rounded-lg shadow-md border-l-4 border-primary-500 hover:shadow-lg transition-shadow">
               <div className="flex items-center">
-                <div className="bg-blue-100 p-3 rounded-full mr-4">
-                  <Calendar className="h-6 w-6 text-blue-500" />
+                <div className="bg-primary-100 p-3 rounded-full mr-4">
+                  <Calendar className="h-6 w-6 text-primary-500" />
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Total Appointments</p>
@@ -174,7 +288,7 @@ export default function Analytics() {
               </div>
             </div>
             
-            <div className="bg-white p-4 rounded-lg shadow border-l-4 border-green-500">
+            <div className="bg-white p-4 rounded-lg shadow-md border-l-4 border-green-500 hover:shadow-lg transition-shadow">
               <div className="flex items-center">
                 <div className="bg-green-100 p-3 rounded-full mr-4">
                   <Activity className="h-6 w-6 text-green-500" />
@@ -186,7 +300,7 @@ export default function Analytics() {
               </div>
             </div>
             
-            <div className="bg-white p-4 rounded-lg shadow border-l-4 border-red-500">
+            <div className="bg-white p-4 rounded-lg shadow-md border-l-4 border-red-500 hover:shadow-lg transition-shadow">
               <div className="flex items-center">
                 <div className="bg-red-100 p-3 rounded-full mr-4">
                   <AlertTriangle className="h-6 w-6 text-red-500" />
@@ -198,10 +312,10 @@ export default function Analytics() {
               </div>
             </div>
             
-            <div className="bg-white p-4 rounded-lg shadow border-l-4 border-purple-500">
+            <div className="bg-white p-4 rounded-lg shadow-md border-l-4 border-secondary-500 hover:shadow-lg transition-shadow">
               <div className="flex items-center">
-                <div className="bg-purple-100 p-3 rounded-full mr-4">
-                  <Clock className="h-6 w-6 text-purple-500" />
+                <div className="bg-secondary-100 p-3 rounded-full mr-4">
+                  <Clock className="h-6 w-6 text-secondary-500" />
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Period</p>
@@ -209,12 +323,17 @@ export default function Analytics() {
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* AI Insights and Recommendations */}
-          <div className="bg-white p-6 rounded-lg shadow">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow"
+          >
             <h3 className="text-lg font-medium text-gray-800 mb-4 flex items-center">
-              <Award className="h-5 w-5 text-blue-500 mr-2" />
+              <Award className="h-5 w-5 text-primary-500 mr-2" />
               AI Insights & Recommendations
             </h3>
             
@@ -227,23 +346,28 @@ export default function Analytics() {
               )}
               
               {analyticsData.aiInsights.recommendations && analyticsData.aiInsights.recommendations.length > 0 && (
-                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <h4 className="font-medium text-blue-800 mb-2">Recommendations</h4>
+                <div className="p-4 bg-primary-50 rounded-lg border border-primary-200">
+                  <h4 className="font-medium text-primary-800 mb-2">Recommendations</h4>
                   <ul className="list-disc pl-5 space-y-1">
                     {analyticsData.aiInsights.recommendations.map((recommendation, index) => (
-                      <li key={index} className="text-blue-700">{recommendation}</li>
+                      <li key={index} className="text-primary-700">{recommendation}</li>
                     ))}
                   </ul>
                 </div>
               )}
             </div>
-          </div>
+          </motion.div>
 
           {/* Doctor Availability Chart */}
           {analyticsData.aiInsights.doctorAvailability && analyticsData.aiInsights.doctorAvailability.length > 0 && (
-            <div className="bg-white p-6 rounded-lg shadow">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow"
+            >
               <h3 className="text-lg font-medium text-gray-800 mb-4 flex items-center">
-                <Users className="h-5 w-5 text-blue-500 mr-2" />
+                <Users className="h-5 w-5 text-primary-500 mr-2" />
                 Doctor Availability
               </h3>
               <div className="h-80">
@@ -254,26 +378,50 @@ export default function Analytics() {
                     barGap={0}
                     barCategoryGap={10}
                   >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip formatter={(value, name) => {
-                      const formattedName = name === 'availableSlots' ? 'Available Slots' : 'Booked Slots';
-                      return [`${value}`, formattedName];
-                    }} />
-                    <Legend />
-                    <Bar dataKey="availableSlots" name="Available Slots" stackId="a" fill="#4ADE80" />
-                    <Bar dataKey="bookedSlots" name="Booked Slots" stackId="a" fill="#FB7185" />
+                    <CartesianGrid strokeDasharray="3 3" stroke={THEME_COLORS.neutral.gray2} />
+                    <XAxis 
+                      dataKey="name" 
+                      tick={{ fill: THEME_COLORS.neutral.gray6 }}
+                      axisLine={{ stroke: THEME_COLORS.neutral.gray3 }}
+                    />
+                    <YAxis 
+                      tick={{ fill: THEME_COLORS.neutral.gray6 }}
+                      axisLine={{ stroke: THEME_COLORS.neutral.gray3 }}
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend 
+                      wrapperStyle={{ paddingTop: 10 }}
+                      iconType="circle"
+                    />
+                    <Bar 
+                      dataKey="availableSlots" 
+                      name="Available Slots" 
+                      stackId="a" 
+                      fill={THEME_COLORS.secondary.default}
+                      radius={[4, 4, 0, 0]}
+                    />
+                    <Bar 
+                      dataKey="bookedSlots" 
+                      name="Booked Slots" 
+                      stackId="a" 
+                      fill={THEME_COLORS.primary.default}
+                      radius={[4, 4, 0, 0]}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-            </div>
+            </motion.div>
           )}
 
           {/* Appointment Status Distribution */}
-          <div className="bg-white p-6 rounded-lg shadow">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow"
+          >
             <h3 className="text-lg font-medium text-gray-800 mb-4 flex items-center">
-              <Activity className="h-5 w-5 text-blue-500 mr-2" />
+              <Activity className="h-5 w-5 text-primary-500 mr-2" />
               Appointment Status Distribution
             </h3>
             <div className="h-80">
@@ -291,21 +439,36 @@ export default function Analytics() {
                     label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                   >
                     {prepareAppointmentStatusData().map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={entry.color} 
+                        stroke={THEME_COLORS.neutral.gray1}
+                        strokeWidth={1}
+                      />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value, name, props) => [`${value} appointments`, props.payload.name]} />
-                  <Legend />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend 
+                    iconType="circle"
+                    layout="horizontal"
+                    verticalAlign="bottom"
+                    align="center"
+                  />
                 </PieChart>
               </ResponsiveContainer>
             </div>
-          </div>
+          </motion.div>
 
           {/* Peak Hours */}
           {analyticsData.aiInsights.peakHours && analyticsData.aiInsights.peakHours.length > 0 && (
-            <div className="bg-white p-6 rounded-lg shadow">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow"
+            >
               <h3 className="text-lg font-medium text-gray-800 mb-4 flex items-center">
-                <Clock className="h-5 w-5 text-blue-500 mr-2" />
+                <Clock className="h-5 w-5 text-primary-500 mr-2" />
                 Peak Hours
               </h3>
               <div className="h-80">
@@ -314,22 +477,49 @@ export default function Analytics() {
                     data={preparePeakHoursData()}
                     margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
                   >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="hour" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Area type="monotone" dataKey="patients" name="Patient Volume" stroke="#8884d8" fill="#8884d8" />
+                    <CartesianGrid strokeDasharray="3 3" stroke={THEME_COLORS.neutral.gray2} />
+                    <XAxis 
+                      dataKey="hour" 
+                      tick={{ fill: THEME_COLORS.neutral.gray6 }}
+                      axisLine={{ stroke: THEME_COLORS.neutral.gray3 }}
+                    />
+                    <YAxis 
+                      tick={{ fill: THEME_COLORS.neutral.gray6 }}
+                      axisLine={{ stroke: THEME_COLORS.neutral.gray3 }}
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend 
+                      iconType="circle"
+                    />
+                    <defs>
+                      <linearGradient id="patientGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={THEME_COLORS.primary.default} stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor={THEME_COLORS.primary.default} stopOpacity={0.1}/>
+                      </linearGradient>
+                    </defs>
+                    <Area 
+                      type="monotone" 
+                      dataKey="patients" 
+                      name="Patient Volume" 
+                      stroke={THEME_COLORS.primary.dark} 
+                      fillOpacity={1}
+                      fill="url(#patientGradient)" 
+                    />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
-            </div>
+            </motion.div>
           )}
 
           {/* Doctor Workload */}
-          <div className="bg-white p-6 rounded-lg shadow">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+            className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow"
+          >
             <h3 className="text-lg font-medium text-gray-800 mb-4 flex items-center">
-              <AlertTriangle className="h-5 w-5 text-blue-500 mr-2" />
+              <AlertTriangle className="h-5 w-5 text-primary-500 mr-2" />
               Doctor Workload
             </h3>
             <div className="h-80">
@@ -338,24 +528,60 @@ export default function Analytics() {
                   data={prepareOverloadedDoctorsData()}
                   margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
-                  <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
-                  <Tooltip />
-                  <Legend />
-                  <Bar yAxisId="left" dataKey="appointments" name="Total Appointments" fill="#8884d8" />
-                  <Line yAxisId="right" type="monotone" dataKey="workload" name="Workload (%)" stroke="#ff7300" />
+                  <CartesianGrid strokeDasharray="3 3" stroke={THEME_COLORS.neutral.gray2} />
+                  <XAxis 
+                    dataKey="name" 
+                    tick={{ fill: THEME_COLORS.neutral.gray6 }}
+                    axisLine={{ stroke: THEME_COLORS.neutral.gray3 }}
+                  />
+                  <YAxis 
+                    yAxisId="left" 
+                    orientation="left" 
+                    stroke={THEME_COLORS.primary.default}
+                    tick={{ fill: THEME_COLORS.neutral.gray6 }}
+                  />
+                  <YAxis 
+                    yAxisId="right" 
+                    orientation="right" 
+                    stroke={THEME_COLORS.secondary.default}
+                    tick={{ fill: THEME_COLORS.neutral.gray6 }}
+                  />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend 
+                    iconType="circle"
+                  />
+                  <Bar 
+                    yAxisId="left" 
+                    dataKey="appointments" 
+                    name="Total Appointments" 
+                    fill={THEME_COLORS.primary.default}
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <Line 
+                    yAxisId="right" 
+                    type="monotone" 
+                    dataKey="workload" 
+                    name="Workload (%)" 
+                    stroke={THEME_COLORS.secondary.dark}
+                    strokeWidth={2}
+                    dot={{ fill: THEME_COLORS.secondary.dark, r: 4 }}
+                    activeDot={{ r: 6, fill: THEME_COLORS.secondary.dark }}
+                  />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
-          </div>
+          </motion.div>
 
           {/* Weekly Appointment Heatmap (Simulated) */}
           {period === 'week' && (
-            <div className="bg-white p-6 rounded-lg shadow">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.7 }}
+              className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow"
+            >
               <h3 className="text-lg font-medium text-gray-800 mb-4 flex items-center">
-                <TrendingUp className="h-5 w-5 text-blue-500 mr-2" />
+                <TrendingUp className="h-5 w-5 text-primary-500 mr-2" />
                 Weekly Appointment Heatmap
               </h3>
               <div className="overflow-x-auto">
@@ -363,14 +589,14 @@ export default function Analytics() {
                   <div className="grid grid-cols-10 gap-1">
                     <div className="h-10"></div>
                     {['9AM', '10AM', '11AM', '12PM', '1PM', '2PM', '3PM', '4PM', '5PM'].map(time => (
-                      <div key={time} className="h-10 flex items-center justify-center text-xs font-medium text-gray-500">
+                      <div key={time} className="h-10 flex items-center justify-center text-xs font-medium text-gray-600">
                         {time}
                       </div>
                     ))}
                     
                     {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => (
                       <React.Fragment key={day}>
-                        <div className="h-10 flex items-center text-xs font-medium text-gray-500">
+                        <div className="h-10 flex items-center text-xs font-medium text-gray-600">
                           {day}
                         </div>
                         {['9AM', '10AM', '11AM', '12PM', '1PM', '2PM', '3PM', '4PM', '5PM'].map(time => {
@@ -382,9 +608,9 @@ export default function Analytics() {
                           return (
                             <div 
                               key={`${day}-${time}`} 
-                              className="h-10 rounded"
+                              className="h-10 rounded transition-all hover:transform hover:scale-105"
                               style={{ 
-                                backgroundColor: `rgba(59, 130, 246, ${intensity / 100})`,
+                                backgroundColor: `rgba(14, 165, 233, ${intensity / 100})`, // primary-500 with opacity
                                 position: 'relative'
                               }}
                             >
@@ -401,7 +627,7 @@ export default function Analytics() {
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
           )}
         </div>
       )}
