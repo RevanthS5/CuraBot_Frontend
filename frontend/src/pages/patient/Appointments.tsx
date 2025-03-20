@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Clock, Tag, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
+import { Calendar, Clock, Tag, AlertCircle, CheckCircle, XCircle, Search, Plus } from 'lucide-react';
 import { appointmentAPI } from '../../services/api';
 import Card from '../../components/Card';
-import Button from '../../components/Button';
+import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 
 interface Appointment {
   _id: string;
@@ -144,21 +145,36 @@ export default function PatientAppointments() {
   };
 
   return (
-    <div className="space-y-6">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+      className="space-y-6"
+    >
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">My Appointments</h1>
-        <Button 
-          variant="primary"
+        <h1 className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-secondary-500 bg-clip-text text-transparent">My Appointments</h1>
+        <Link
           to="/patient/appointments/book"
+          className="inline-flex items-center px-6 py-3 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-primary-600 to-secondary-600 hover:from-primary-700 hover:to-secondary-700 transition-all shadow-md hover:shadow-lg"
         >
+          <Plus className="mr-2 h-4 w-4" />
           Book New Appointment
-        </Button>
+        </Link>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative" role="alert">
-          <span className="block sm:inline">{error}</span>
-        </div>
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded-lg shadow-sm" 
+          role="alert"
+        >
+          <div className="flex items-center">
+            <AlertCircle className="h-5 w-5 mr-2" />
+            <span className="font-medium">Error</span>
+          </div>
+          <p className="mt-1">{error}</p>
+        </motion.div>
       )}
 
       {/* Tabs */}
@@ -213,7 +229,12 @@ export default function PatientAppointments() {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
         </div>
       ) : filteredAppointments.length === 0 ? (
-        <div className="text-center py-12">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3 }}
+          className="text-center py-12"
+        >
           <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No appointments found</h3>
           <p className="text-gray-500 mb-6">
@@ -221,68 +242,83 @@ export default function PatientAppointments() {
               ? "You don't have any appointments yet." 
               : `You don't have any ${activeTab} appointments.`}
           </p>
-          <Button 
-            variant="primary"
+          <Link
             to="/patient/appointments/book"
+            className="inline-flex items-center px-6 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-primary-600 to-secondary-600 hover:from-primary-700 hover:to-secondary-700 transition-all shadow-md hover:shadow-lg"
           >
+            <Plus className="mr-2 h-4 w-4" />
             Book an Appointment
-          </Button>
-        </div>
+          </Link>
+        </motion.div>
       ) : (
         <div className="space-y-4">
           {filteredAppointments.map((appointment) => (
-            <Card key={appointment._id} className="hover:shadow-md transition-shadow">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center mb-2">
-                    <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusClass(appointment.status, appointment.date)}`}>
-                      {getStatusIcon(appointment.status, appointment.date)}
-                      <span className="ml-1">{getStatusText(appointment.status, appointment.date)}</span>
+            <motion.div
+              key={appointment._id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              whileHover={{ y: -5, transition: { duration: 0.2 } }}
+            >
+              <Card className="overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300">
+                <div className="p-1 bg-gradient-to-r from-primary-500 to-secondary-500"></div>
+                <div className="p-5">
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+                    <div className="flex-1">
+                      <div className="flex flex-wrap items-center gap-2 mb-3">
+                        <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusClass(appointment.status, appointment.date)}`}>
+                          {getStatusIcon(appointment.status, appointment.date)}
+                          <span className="ml-1">{getStatusText(appointment.status, appointment.date)}</span>
+                        </div>
+                        <div className="flex items-center text-sm text-gray-500">
+                          <Calendar className="h-4 w-4 mr-1" />
+                          {new Date(appointment.date).toLocaleDateString('en-US', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </div>
+                        <div className="flex items-center text-sm text-gray-500">
+                          <Clock className="h-4 w-4 mr-1" />
+                          {appointment.time}
+                        </div>
+                      </div>
+                      
+                      <h3 className="text-lg font-medium text-gray-900 mb-1">Dr. {appointment.doctorId?.name || 'Unknown'}</h3>
+                      
+                      <div className="flex items-center text-sm text-primary-600">
+                        <Tag className="h-4 w-4 mr-1" />
+                        <span>{appointment.doctorId?.specialty || 'Specialist'}</span>
+                      </div>
                     </div>
-                    <span className="mx-2 text-gray-300">•</span>
-                    <div className="flex items-center text-sm text-gray-500">
-                      <Calendar className="h-4 w-4 mr-1" />
-                      {new Date(appointment.date).toLocaleDateString()}
-                    </div>
-                    <span className="mx-2 text-gray-300">•</span>
-                    <div className="flex items-center text-sm text-gray-500">
-                      <Clock className="h-4 w-4 mr-1" />
-                      {appointment.time}
+                    
+                    <div className="mt-4 md:mt-0 flex space-x-3">
+                      <Link
+                        to={`/patient/appointments/${appointment._id}`}
+                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-primary-700 bg-primary-50 hover:bg-primary-100 transition-all"
+                      >
+                        <Calendar className="mr-2 h-4 w-4" />
+                        View Details
+                      </Link>
+                      
+                      {appointment.status === 'pending' && new Date(appointment.date) > currentDate && (
+                        <button
+                          className="inline-flex items-center px-4 py-2 border border-red-500 text-sm font-medium rounded-md text-red-600 bg-white hover:bg-red-50 transition-all"
+                          onClick={() => handleCancelAppointment(appointment._id)}
+                        >
+                          <XCircle className="mr-2 h-4 w-4" />
+                          Cancel
+                        </button>
+                      )}
                     </div>
                   </div>
-                  
-                  <h3 className="text-lg font-medium text-gray-900">Dr. {appointment.doctorId?.name || 'Unknown'}</h3>
-                  
-                  <div className="mt-2 flex items-center text-sm text-gray-500">
-                    <Tag className="h-4 w-4 mr-1" />
-                    <span>{appointment.doctorId?.specialty || 'Specialist'}</span>
-                  </div>
                 </div>
-                
-                <div className="mt-4 md:mt-0 flex space-x-3">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    to={`/patient/appointments/${appointment._id}`}
-                  >
-                    View Details
-                  </Button>
-                  
-                  {appointment.status === 'pending' && new Date(appointment.date) > currentDate && (
-                    <Button 
-                      variant="danger" 
-                      size="sm"
-                      onClick={() => handleCancelAppointment(appointment._id)}
-                    >
-                      Cancel
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </Card>
+              </Card>
+            </motion.div>
           ))}
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
