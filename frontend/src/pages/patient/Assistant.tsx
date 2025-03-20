@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Send, Bot, User, ArrowRight } from 'lucide-react';
+import { Send, Bot, User } from 'lucide-react';
 import { chatbotAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import Button from '../../components/Button';
@@ -117,10 +117,6 @@ export default function Assistant() {
     }
   };
 
-  const handleBookAppointment = (doctorId: string) => {
-    navigate(`/patient/book-appointment?doctorId=${doctorId}`);
-  };
-
   return (
     <div className="flex flex-col h-full">
       <div className="flex justify-between items-center mb-6">
@@ -189,13 +185,6 @@ export default function Assistant() {
                             <p className="text-xs text-gray-500">{doctor.qualification}</p>
                             <p className="text-sm text-gray-700 mt-2">{doctor.reasoning}</p>
                           </div>
-                          <Button
-                            size="sm"
-                            onClick={() => handleBookAppointment(doctor.id)}
-                            className="flex items-center"
-                          >
-                            Book <ArrowRight className="ml-1 h-4 w-4" />
-                          </Button>
                         </div>
                       </div>
                     ))}
@@ -244,7 +233,7 @@ export default function Assistant() {
           </div>
           {showDoctors && (
             <p className="text-sm text-gray-500 mt-2">
-              Chat session completed. Please select a doctor to book an appointment or start a new chat.
+              Chat session completed with doctor recommendations. You can start a new chat for more help.
             </p>
           )}
           {showDoctors && (

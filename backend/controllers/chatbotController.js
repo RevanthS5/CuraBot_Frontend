@@ -18,50 +18,10 @@ try {
   console.error("❌ Failed to initialize Groq client:", error);
 }
 
-// ✅ Enhanced AI-Powered Medical Assistant with Multiple Capabilities
-const processUserQuery = async (userId, message) => {
-  // Get all doctors for reference
-  const doctors = await getAllDoctors();
-  
-  // Extract intent from user message (without relying on chat history)
-  const intent = await determineUserIntent(message);
-  
-  // Process based on intent
-  switch (intent.type) {
-    case "symptom_analysis":
-      return await handleSymptomAnalysis(userId, message, doctors);
-    case "doctor_availability":
-      return await handleDoctorAvailability(intent.doctorId, intent.date);
-    case "appointment_info":
-      return await handleAppointmentInfo(userId, intent.appointmentId);
-    case "doctor_info":
-      return await handleDoctorInfo(intent.doctorId);
-    case "reschedule_request":
-      return await handleRescheduleRequest(userId, intent.appointmentId, intent.newDate, intent.newTime);
-    case "general_question":
-      return await handleGeneralQuestion(message);
-    case "medication_reminder":
-      return await handleMedicationReminder(userId, intent.medicationName, intent.time);
-    case "health_tips":
-      return await handleHealthTips(intent.category);
-    case "emergency_info":
-      return await handleEmergencyInfo();
-    case "user_profile":
-      return await handleUserProfile(userId);
-    default:
-      return {
-        message: "I'm not sure how to help with that. You can ask me about doctor availability, your appointments, describe your symptoms, or ask for health tips.",
-        suggestions: [
-          "Find a doctor for my headache",
-          "When is my next appointment?",
-          "Show me my profile",
-          "Give me health tips"
-        ]
-      };
-  }
-};
+// Simple in-memory conversation state tracker (will reset on server restart)
+const conversationState = new Map();
 
-// ✅ Determine user intent using LLM (without relying on chat history)
+// ✅ Determine user intent using LLM
 const determineUserIntent = async (message) => {
   const prompt = `
   You are an AI assistant for a healthcare application. Analyze the following user message and determine the user's intent.
@@ -110,37 +70,112 @@ const determineUserIntent = async (message) => {
   }
 };
 
+// ✅ Enhanced AI-Powered Medical Assistant with Multiple Capabilities
+const processUserQuery = async (userId, message) => {
+  // Get all doctors for reference
+  const doctors = await getAllDoctors();
+  
+  // Extract intent from user message
+  const intent = await determineUserIntent(message);
+  
+  // Process based on intent
+  switch (intent.type) {
+    case "symptom_analysis":
+      return await handleSymptomAnalysis(userId, message, doctors);
+    case "doctor_availability":
+      return await handleDoctorAvailability(intent.doctorId, intent.date);
+    case "appointment_info":
+      return await handleAppointmentInfo(userId, intent.appointmentId);
+    case "doctor_info":
+      return await handleDoctorInfo(intent.doctorId);
+    case "reschedule_request":
+      return await handleRescheduleRequest(userId, intent.appointmentId, intent.newDate, intent.newTime);
+    case "general_question":
+      return await handleGeneralQuestion(message);
+    case "medication_reminder":
+      return await handleMedicationReminder(userId, intent.medicationName, intent.time);
+    case "health_tips":
+      return await handleHealthTips(intent.category);
+    case "emergency_info":
+      return await handleEmergencyInfo();
+    case "user_profile":
+      return await handleUserProfile(userId);
+    default:
+      return {
+        message: "I'm not sure how to help with that. You can ask me about doctor availability, your appointments, describe your symptoms, or ask for health tips.",
+        suggestions: [
+          "Find a doctor for my headache",
+          "When is my next appointment?",
+          "Show me my profile",
+          "Give me health tips"
+        ]
+      };
+  }
+};
+
 // ✅ Handle symptom analysis (existing functionality enhanced)
 const handleSymptomAnalysis = async (userId, message, doctors) => {
-  const extractedSymptoms = message.split(" ");
-  const previousMessages = [];
+  // Initialize or get conversation state
+  if (!conversationState.has(userId)) {
+    conversationState.set(userId, {
+      stage: 'initial',
+      symptoms: [],
+      followUpCount: 0,
+      responses: []
+    });
+  }
+  
+  const state = conversationState.get(userId);
   
   try {
     // Get user info for personalization
     const user = await User.findById(userId);
     const userName = user ? user.name : null;
     
-    const analysis = await analyzeSymptomsWithGroq(extractedSymptoms, previousMessages, doctors);
+    // Add user's response to the state
+    state.responses.push(message);
     
-    // If we have follow-up questions, ask them in a conversational way
-    if (analysis.followUpQuestions && analysis.followUpQuestions.length > 0) {
-      return { 
-        response: userName ? `${userName}, ${analysis.followUpQuestions[0].toLowerCase()}` : analysis.followUpQuestions[0]
-      };
+    // If we're in the initial stage or still asking follow-up questions
+    if (state.stage === 'initial' || state.followUpCount < 2) {
+      // Update the symptoms list with the current message
+      state.symptoms.push(message);
+      
+      // If we're just starting, ask the first follow-up question
+      if (state.stage === 'initial') {
+        state.stage = 'follow_up';
+        state.followUpCount = 1;
+        
+        // Generate a follow-up question
+        const analysis = await generateFollowUpQuestion(state.symptoms, 1);
+        return { 
+          response: userName ? `${userName}, ${analysis.question}` : analysis.question
+        };
+      }
+      // If we've asked one question but not two yet
+      else if (state.followUpCount === 1) {
+        state.followUpCount = 2;
+        
+        // Generate the second follow-up question
+        const analysis = await generateFollowUpQuestion(state.symptoms, 2);
+        return { 
+          response: userName ? `${userName}, ${analysis.question}` : analysis.question
+        };
+      }
     }
     
-    const recommendedDoctors = analysis.recommendedDoctors;
+    // After two follow-up questions, recommend doctors
+    state.stage = 'recommendation';
     
-    if (!recommendedDoctors || recommendedDoctors.length === 0) {
-      return { 
-        response: "I'm having trouble finding the right doctor based on the symptoms you've described. Could you provide more details about what you're experiencing? Or you might want to try describing your symptoms differently."
-      };
-    }
+    // Get doctor recommendations based on all collected information
+    const doctorRecommendations = await getDoctorRecommendations(state.symptoms, doctors);
     
-    // Keep structured response for doctor recommendations
+    // Reset the conversation state for this user
+    conversationState.delete(userId);
+    
+    // Return the structured doctor recommendations
     return {
-      message: analysis.reassurance || "Based on what you've described, here are some doctors who might be able to help:",
-      doctors: recommendedDoctors.map(doc => ({
+      message: doctorRecommendations.reassurance || "Based on what you've described, here are some doctors who might be able to help:",
+      doctors: doctorRecommendations.recommendedDoctors.map(doc => ({
         id: doc.id,
         name: doc.name,
         speciality: doc.speciality,
@@ -151,8 +186,121 @@ const handleSymptomAnalysis = async (userId, message, doctors) => {
     };
   } catch (error) {
     console.error("Error in symptom analysis:", error);
+    // Reset conversation state on error
+    conversationState.delete(userId);
     return { 
       response: "I'm sorry, I'm having trouble analyzing your symptoms right now. This could be due to a technical issue. You can try again or describe your symptoms differently."
+    };
+  }
+};
+
+// Generate a follow-up question based on symptoms
+const generateFollowUpQuestion = async (symptoms, questionNumber) => {
+  const prompt = `
+  You are a medical assistant AI that helps understand patient symptoms.
+  
+  Patient has described: "${symptoms.join(". ")}"
+  
+  Generate follow-up question #${questionNumber} of 2 to better understand their condition.
+  Make this question conversational, specific, and focused on gathering important medical information.
+  The question should be direct and easy to answer.
+  
+  Return ONLY the question text in JSON format:
+  {
+    "question": "your follow-up question here"
+  }
+  `;
+  
+  try {
+    const response = await groq.chat.completions.create({
+      messages: [{ role: "user", content: prompt }],
+      model: "llama-3.1-8b-instant",
+      temperature: 0.3,
+      max_tokens: 200,
+      response_format: { type: "json_object" }
+    });
+    
+    return JSON.parse(response.choices[0].message.content);
+  } catch (error) {
+    console.error("Error generating follow-up question:", error);
+    return { 
+      question: questionNumber === 1 
+        ? "Can you tell me when these symptoms started and how severe they are?" 
+        : "Are you experiencing any other symptoms like fever, nausea, or dizziness?"
+    };
+  }
+};
+
+// Get doctor recommendations based on all symptoms
+const getDoctorRecommendations = async (symptoms, doctorList) => {
+  const prompt = `
+  You are a medical assistant AI that helps recommend the best doctors based on patient symptoms.
+  
+  Patient has described: "${symptoms.join(". ")}"
+  
+  Here is the list of available doctors:
+  ${doctorList.map(doc => `
+    ID: ${doc._id}
+    Name: ${doc.name}
+    Speciality: ${doc.speciality}
+    Qualification: ${doc.qualification}
+    Expertise: ${doc.expertise.join(", ")}
+    Overview: ${doc.overview.substring(0, 300)}...
+  `).join("\n\n")}
+  
+  Based on the symptoms described, recommend the 3 most suitable doctors.
+  Provide a brief, empathetic reassurance message and a simple 2-line reasoning for each doctor.
+  
+  Respond in JSON format:
+  {
+    "reassurance": "Brief empathetic reassurance",
+    "recommendedDoctors": [
+      {
+        "id": "doctor_id_1",
+        "name": "Doctor's Name",
+        "speciality": "Doctor's Speciality",
+        "qualification": "Doctor's Qualification",
+        "reasoning": "Simple reason (2 lines max)"
+      },
+      {
+        "id": "doctor_id_2",
+        "name": "Doctor's Name",
+        "speciality": "Doctor's Speciality",
+        "qualification": "Doctor's Qualification",
+        "reasoning": "Simple reason (2 lines max)"
+      },
+      {
+        "id": "doctor_id_3",
+        "name": "Doctor's Name",
+        "speciality": "Doctor's Speciality",
+        "qualification": "Doctor's Qualification",
+        "reasoning": "Simple reason (2 lines max)"
+      }
+    ]
+  }
+  `;
+  
+  try {
+    const response = await groq.chat.completions.create({
+      messages: [{ role: "user", content: prompt }],
+      model: "llama-3.1-8b-instant",
+      temperature: 0.4,
+      max_tokens: 1024,
+      response_format: { type: "json_object" }
+    });
+    
+    return JSON.parse(response.choices[0].message.content);
+  } catch (error) {
+    console.error("Error getting doctor recommendations:", error);
+    return {
+      reassurance: "I've analyzed your symptoms and found some doctors who might be able to help.",
+      recommendedDoctors: doctorList.slice(0, 3).map(doc => ({
+        id: doc._id,
+        name: doc.name,
+        speciality: doc.speciality,
+        qualification: doc.qualification,
+        reasoning: "This doctor specializes in conditions similar to what you've described."
+      }))
     };
   }
 };
@@ -500,104 +648,6 @@ const handleUserProfile = async (userId) => {
   }
 };
 
-// ✅ AI-Generated Follow-Up Questions & Analysis Using Groq (LIMITED to 2-3 Questions)
-const analyzeSymptomsWithGroq = async (symptoms, previousAnswers = [], doctorList) => {
-  const followUpLimit = 2; // Max 2 follow-up questions
-
-  const prompt = `
-  You are a medical assistant AI that helps diagnose symptoms and recommend the best doctor.
-  Your tone should be warm, empathetic, and conversational - like a caring healthcare professional.
-
-  Symptoms described: "${symptoms.join(" ")}"
-  Additional patient responses: ${previousAnswers.join(", ")}
-
-  Here is the list of available doctors:
-  ${doctorList.map(doc => `
-    ID: ${doc._id}
-    Name: ${doc.name}
-    Speciality: ${doc.speciality}
-    Qualification: ${doc.qualification}
-    Expertise: ${doc.expertise.join(", ")}
-    Overview: ${doc.overview.substring(0, 300)}...
-  `).join("\n\n")}
-
-  Please analyze the symptoms and:
-  1. Extract key symptoms mentioned, focusing on medically relevant terms.
-  2. Generate up to ${followUpLimit} follow-up questions to better understand the condition. Make these questions conversational and empathetic, as if a caring doctor is asking them. Avoid clinical or robotic language.
-  3. If enough data is available, recommend the 3 best doctors based on expertise, specialization, and patient condition.
-  4. Provide a simple 2-line reason for each recommended doctor that sounds natural and helpful.
-  5. Include a brief, empathetic note of reassurance (1-2 sentences) that acknowledges the patient's concerns without making medical promises.
-
-  Respond in JSON format:
-  {
-    "extractedSymptoms": ["symptom1", "symptom2"],
-    "followUpQuestions": ["question1", "question2"],
-    "reassurance": "Brief empathetic reassurance",
-    "recommendedDoctors": [
-      {
-        "id": "doctor_id_1",
-        "name": "Doctor's Name",
-        "speciality": "Doctor's Speciality",
-        "qualification": "Doctor's Qualification",
-        "reasoning": "Simple reason (2 lines max)"
-      },
-      {
-        "id": "doctor_id_2",
-        "name": "Doctor's Name",
-        "speciality": "Doctor's Speciality",
-        "qualification": "Doctor's Qualification",
-        "reasoning": "Simple reason (2 lines max)"
-      },
-      {
-        "id": "doctor_id_3",
-        "name": "Doctor's Name",
-        "speciality": "Doctor's Speciality",
-        "qualification": "Doctor's Qualification",
-        "reasoning": "Simple reason (2 lines max)"
-      }
-    ]
-  }
-  `;
-
-  try {
-    const response = await groq.chat.completions.create({
-      messages: [{ role: "user", content: prompt }],
-      model: "llama-3.1-8b-instant",
-      temperature: 0.5,
-      max_tokens: 1024,
-      top_p: 0.9,
-      response_format: { type: "json_object" }
-    });
-
-    const result = JSON.parse(response.choices[0].message.content);
-    
-    // Format the response to be more human-like
-    if (result.recommendedDoctors && result.recommendedDoctors.length > 0) {
-      result.message = result.reassurance || "Based on what you've told me, I think these doctors might be able to help:";
-    } else if (result.followUpQuestions && result.followUpQuestions.length > 0) {
-      // Choose a random intro for the follow-up question
-      const intros = [
-        "I'd like to understand a bit more about what you're experiencing. ",
-        "To help you better, I need to know: ",
-        "If you don't mind me asking: ",
-        "It would help me to know: ",
-        ""  // Empty string for some variety
-      ];
-      
-      const randomIntro = intros[Math.floor(Math.random() * intros.length)];
-      result.followUpQuestions[0] = randomIntro + result.followUpQuestions[0];
-    }
-    
-    return result;
-  } catch (error) {
-    console.error("Error analyzing symptoms:", error);
-    return {
-      followUpQuestions: ["Could you tell me more about your symptoms?"],
-      recommendedDoctors: []
-    };
-  }
-};
-
 // ✅ Store Chat in MongoDB
 const saveChatMessage = async (userId, sender, message) => {
   let chat = await Chat.findOne({ userId });
@@ -643,13 +693,13 @@ const chatbotResponse = asyncHandler(async (req, res) => {
         timeGreeting = "Good evening! ";
       }
       
-      const response = timeGreeting + greeting + " How can I assist you today?";
+      const response = timeGreeting + greeting + " How can I assist you today? Please describe your symptoms or health concerns.";
       
       await saveChatMessage(userId, "bot", response);
       return res.status(200).json({ response });
     } catch (error) {
       console.error("Error generating greeting:", error);
-      const defaultGreeting = "Hi there! I'm CuraBot! How can I assist you today?";
+      const defaultGreeting = "Hi there! I'm CuraBot! How can I assist you today? Please describe your symptoms or health concerns.";
       
       await saveChatMessage(userId, "bot", defaultGreeting);
       return res.status(200).json({ response: defaultGreeting });
@@ -659,13 +709,32 @@ const chatbotResponse = asyncHandler(async (req, res) => {
   // ✅ Store user message in chat history
   await saveChatMessage(userId, "user", message);
 
-  // ✅ Process the user's query with enhanced capabilities (without relying on chat history)
-  const response = await processUserQuery(userId, message);
-  
-  // ✅ Store bot response in chat history
-  await saveChatMessage(userId, "bot", typeof response === 'object' ? JSON.stringify(response) : response);
+  try {
+    // ✅ Process the user's query with enhanced capabilities
+    const response = await processUserQuery(userId, message);
+    
+    // ✅ Store bot response in chat history - handle different response formats
+    if (typeof response === 'object') {
+      if (response.response) {
+        // Simple text response
+        await saveChatMessage(userId, "bot", response.response);
+      } else if (response.message) {
+        // Doctor recommendation or other structured response
+        await saveChatMessage(userId, "bot", response.message);
+      }
+    } else {
+      await saveChatMessage(userId, "bot", response);
+    }
 
-  return res.status(200).json(response);
+    return res.status(200).json(response);
+  } catch (error) {
+    console.error("Error processing message:", error);
+    const errorResponse = { 
+      response: "I'm sorry, I encountered an error processing your request. Please try again." 
+    };
+    await saveChatMessage(userId, "bot", errorResponse.response);
+    return res.status(500).json(errorResponse);
+  }
 });
 
 module.exports = { chatbotResponse };
