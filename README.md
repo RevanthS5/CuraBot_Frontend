@@ -66,7 +66,7 @@ CuraBot is a comprehensive healthcare management platform designed to streamline
 
 1. Clone the repository
    ```
-   git clone https://github.com/yourusername/CuraBot-Redefined.git
+   git clone https://github.com/Boot41/CuraBot-Redefined.git
    cd CuraBot-Redefined
    ```
 
@@ -99,4 +99,4 @@ CuraBot is a comprehensive healthcare management platform designed to streamline
 
 ## Contributors
 
-- [Your Name](https://github.com/yourusername)
+- [Abhineeth Srinivasa](https://github.com/AbhineethT41)
