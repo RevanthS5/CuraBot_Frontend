@@ -1,7 +1,6 @@
-import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Activity } from 'lucide-react';
+import { Activity, LogOut } from 'lucide-react';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -21,7 +20,7 @@ export default function Navbar() {
           <div className="flex">
             <Link to="/" className="flex items-center">
               <Activity className="h-8 w-8 text-primary-600" />
-              <span className="ml-2 text-xl font-bold text-gray-900">CuraBot</span>
+              <span className="ml-2 text-xl font-bold bg-gradient-to-r from-primary-600 to-secondary-500 bg-clip-text text-transparent">CuraBot</span>
             </Link>
           </div>
 
@@ -67,8 +66,9 @@ export default function Navbar() {
             <div className="ml-4 flex items-center">
               <button
                 onClick={handleLogout}
-                className="ml-4 px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-md"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-primary-600 to-secondary-600 hover:from-primary-700 hover:to-secondary-700 transition-all shadow-md hover:shadow-lg"
               >
+                <LogOut className="mr-2 h-4 w-4" />
                 Logout
               </button>
             </div>
