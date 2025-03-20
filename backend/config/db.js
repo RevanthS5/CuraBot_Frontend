@@ -2,8 +2,14 @@ const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const path = require("path");
 
-// Load .env from the root directory
-dotenv.config({ path: path.resolve(__dirname, "../.env") });
+// Load .env file
+// In Docker, the .env file is in the app root directory
+// In development, it's in the parent directory
+const envPath = process.env.NODE_ENV === 'production' 
+  ? path.resolve(__dirname, '../../.env')
+  : path.resolve(__dirname, "../../.env");
+
+dotenv.config({ path: envPath });
 
 const connectDB = async () => {
   try {

@@ -2,8 +2,12 @@ const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv");
 const path = require("path");
 
-// ✅ Load .env from root directory
-dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+// Load .env file based on environment
+const envPath = process.env.NODE_ENV === 'production' 
+  ? path.resolve(__dirname, '../../.env')
+  : path.resolve(__dirname, "../../.env");
+
+dotenv.config({ path: envPath });
 
 // ✅ Middleware to Protect Routes (Authentication Check)
 const protect = (req, res, next) => {

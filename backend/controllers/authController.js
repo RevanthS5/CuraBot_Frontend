@@ -4,8 +4,12 @@ const crypto = require("crypto"); // Use PBKDF2
 const dotenv = require("dotenv");
 const path = require("path");
 
-// Load .env from the root directory
-dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+// Load .env file based on environment
+const envPath = process.env.NODE_ENV === 'production' 
+  ? path.resolve(__dirname, '../../.env')
+  : path.resolve(__dirname, "../../.env");
+
+dotenv.config({ path: envPath });
 
 // ✅ User Registration Function
 const registerUser = async (req, res) => {
