@@ -160,17 +160,28 @@ export const patientAPI = {
 };
 
 export const adminAPI = {
-  // Admin routes from adminRoutes.js
+  // Admin dashboard stats
   getDashboardStats: () => api.get('/admin/dashboard'),
-  getAllPatients: () => api.get('/admin/patients'),
-  getAllDoctors: () => api.get('/admin/doctors'),
-  createDoctor: (data: any) => api.post('/admin/doctors', data),
-  updateDoctor: (id: string, data: any) => api.patch(`/admin/doctors/${id}`, data),
-  deleteDoctor: (id: string) => api.delete(`/admin/doctors/${id}`),
   
-  // Analytics endpoints
-  getAppointmentStats: () => api.get('/admin/analytics/appointments'),
-  getUserStats: () => api.get('/admin/analytics/users'),
+  // Doctor management
+  getAllDoctors: () => api.get('/doctors'),
+  getDoctorById: (id: string) => api.get(`/doctors/${id}`),
+  getAllPatients: () => api.get('/admin/patients'),
+  addDoctor: (data: any) => api.patch('/admin/doctors/add', data),
+  updateDoctor: (id: string, data: any) => api.patch(`/admin/doctors/update/${id}`, data),
+  deleteDoctor: (id: string) => api.delete(`/admin/doctors/delete/${id}`),
+  
+  // Doctor schedule
+  getDoctorSchedule: (doctorId: string) => api.get(`/admin/doctor-schedule/${doctorId}`),
+  
+  // Analytics
+  getAnalytics: (period: 'day' | 'week') => api.get(`/admin/analytics?period=${period}`),
+  
+  // Appointment management
+  manageAppointment: (appointmentId: string, data: any) => 
+    api.put(`/admin/appointments/${appointmentId}`, data),
+  scheduleManualAppointment: (data: any) => 
+    api.post('/admin/appointments/manual', data),
 };
 
 export const chatbotAPI = {

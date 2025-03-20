@@ -159,6 +159,22 @@ const getAdminAnalytics = asyncHandler(async (req, res) => {
         const doctorWorkload = await Appointment.aggregate([
             { $match: { date: { $gte: startDate, $lte: endDate } } },
             { $group: { _id: "$doctorId", totalAppointments: { $sum: 1 } } },
+            { 
+                $lookup: {
+                    from: "doctors",
+                    localField: "_id",
+                    foreignField: "_id",
+                    as: "doctorInfo"
+                }
+            },
+            { 
+                $project: {
+                    doctorId: "$_id",
+                    totalAppointments: 1,
+                    doctorName: { $arrayElemAt: ["$doctorInfo.name", 0] },
+                    _id: 0
+                }
+            },
             { $sort: { totalAppointments: -1 } }
         ]);
 
@@ -175,6 +191,7 @@ const getAdminAnalytics = asyncHandler(async (req, res) => {
             { $match: { "availableSlots.date": { $gte: startDate, $lte: endDate } } },
             {
                 $project: {
+                    name: 1,
                     doctorId: 1,
                     totalAvailableSlots: {
                         $sum: {
@@ -194,6 +211,23 @@ const getAdminAnalytics = asyncHandler(async (req, res) => {
                             }
                         }
                     }
+                }
+            },
+            { 
+                $lookup: {
+                    from: "doctors",
+                    localField: "doctorId",
+                    foreignField: "_id",
+                    as: "doctorInfo"
+                }
+            },
+            { 
+                $project: {
+                    doctorId: 1,
+                    doctorName: { $arrayElemAt: ["$doctorInfo.name", 0] },
+                    totalAvailableSlots: 1,
+                    bookedSlots: 1,
+                    _id: 1
                 }
             }
         ]);
@@ -222,7 +256,7 @@ const getAdminAnalytics = asyncHandler(async (req, res) => {
         Provide structured insights **only for the selected period (${period})**, in JSON format:
         {
             "peakHours": ${JSON.stringify(peakHoursData)},
-            "overloadedDoctors": [{"doctorId": "67d16bcf024e773b6fddf3ad", "totalAppointments": 12}],
+            "overloadedDoctors": [{"doctorId": "67d16bcf024e773b6fddf3ad", "doctorName": "Dr. John Smith", "totalAppointments": 12}],
             "doctorAvailability": ${JSON.stringify(doctorSchedules)},
             "cancellationTrends": "Most cancellations happen between 8AM-10AM",
             "recommendations": [
