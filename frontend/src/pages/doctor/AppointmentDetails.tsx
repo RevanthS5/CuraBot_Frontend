@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { doctorAPI } from '../../services/api';
+import { Calendar, Clock, User, Mail, ChevronLeft, AlertCircle, FileText, Activity, Clipboard, MessageSquare } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface PatientSummary {
   patientName: string;
@@ -84,104 +86,147 @@ export default function AppointmentDetails() {
     return `${formattedHour}:${minutes} ${ampm}`;
   };
 
+  const getStatusColor = (status: string) => {
+    switch(status) {
+      case 'confirmed':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800 border-red-200';
+      case 'completed':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="p-6 flex justify-center items-center h-64">
+        <div className="relative">
+          <div className="h-16 w-16 rounded-full border-t-4 border-b-4 border-primary-500 animate-spin"></div>
+          <div className="h-12 w-12 rounded-full border-t-4 border-b-4 border-secondary-500 animate-spin absolute top-2 left-2"></div>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-red-50 border-l-4 border-red-500 p-4 m-6">
-        <div className="flex">
-          <div className="flex-shrink-0">
-            <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-            </svg>
+      <div className="p-6">
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md shadow-sm"
+        >
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <AlertCircle className="h-5 w-5 text-red-500" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
           </div>
-          <div className="ml-3">
-            <p className="text-sm text-red-700">{error}</p>
-          </div>
-        </div>
+        </motion.div>
       </div>
     );
   }
 
   if (!patientSummary) {
     return (
-      <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 m-6">
-        <div className="flex">
-          <div className="flex-shrink-0">
-            <svg className="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-            </svg>
+      <div className="p-6">
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-md shadow-sm"
+        >
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <AlertCircle className="h-5 w-5 text-yellow-500" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-yellow-700">Patient summary not found</p>
+            </div>
           </div>
-          <div className="ml-3">
-            <p className="text-sm text-yellow-700">Patient summary not found</p>
-          </div>
-        </div>
+        </motion.div>
       </div>
     );
   }
 
   return (
     <div className="p-6">
-      <div className="mb-6">
-        <Link to="/doctor/schedule" className="text-blue-600 hover:text-blue-800 flex items-center">
-          <svg className="h-5 w-5 mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
-          </svg>
+      <motion.div 
+        initial={{ opacity: 0, x: -10 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.3 }}
+        className="mb-6"
+      >
+        <Link 
+          to="/doctor/schedule" 
+          className="inline-flex items-center text-primary-600 hover:text-primary-800 transition-colors"
+        >
+          <ChevronLeft className="h-5 w-5 mr-1" />
           Back to Schedule
         </Link>
-      </div>
+      </motion.div>
 
       {appointment && (
-        <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
-          <div className="px-4 py-5 sm:px-6 bg-blue-50">
-            <h3 className="text-lg leading-6 font-medium text-gray-900">
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="bg-white shadow-md rounded-lg overflow-hidden border border-gray-200 mb-6"
+        >
+          <div className="px-4 py-5 sm:px-6 bg-gradient-to-r from-primary-50 to-secondary-50">
+            <h3 className="text-lg leading-6 font-medium text-gray-900 flex items-center">
+              <Calendar className="h-5 w-5 mr-2 text-primary-500" />
               Appointment Details
             </h3>
-            <p className="mt-1 max-w-2xl text-sm text-gray-500">
+            <p className="mt-1 max-w-2xl text-sm text-gray-500 flex items-center">
+              <Clock className="h-4 w-4 mr-1 text-gray-400" />
               {formatDate(appointment.date)} at {formatTime(appointment.time)}
             </p>
           </div>
           <div className="border-t border-gray-200">
             <dl>
               <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">Patient Name</dt>
-                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                <dt className="text-sm font-medium text-gray-500 flex items-center">
+                  <User className="h-4 w-4 mr-1 text-gray-400" />
+                  Patient Name
+                </dt>
+                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2 font-medium">
                   {patientSummary.patientName}
                 </dd>
               </div>
               {appointment.patientId?.email && (
                 <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                  <dt className="text-sm font-medium text-gray-500">Email</dt>
+                  <dt className="text-sm font-medium text-gray-500 flex items-center">
+                    <Mail className="h-4 w-4 mr-1 text-gray-400" />
+                    Email
+                  </dt>
                   <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                     {appointment.patientId.email}
                   </dd>
                 </div>
               )}
               <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">Status</dt>
+                <dt className="text-sm font-medium text-gray-500 flex items-center">
+                  <Activity className="h-4 w-4 mr-1 text-gray-400" />
+                  Status
+                </dt>
                 <dd className="mt-1 sm:mt-0 sm:col-span-2">
-                  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                    appointment.status === 'pending' 
-                      ? 'bg-yellow-100 text-yellow-800' 
-                      : appointment.status === 'completed' 
-                        ? 'bg-green-100 text-green-800' 
-                        : appointment.status === 'cancelled' 
-                          ? 'bg-red-100 text-red-800' 
-                          : 'bg-blue-100 text-blue-800'
-                  }`}>
+                  <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getStatusColor(appointment.status)}`}>
                     {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
                   </span>
                 </dd>
               </div>
               {appointment.reason && (
                 <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                  <dt className="text-sm font-medium text-gray-500">Reason for Visit</dt>
+                  <dt className="text-sm font-medium text-gray-500 flex items-center">
+                    <Clipboard className="h-4 w-4 mr-1 text-gray-400" />
+                    Reason for Visit
+                  </dt>
                   <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                     {appointment.reason}
                   </dd>
@@ -189,13 +234,19 @@ export default function AppointmentDetails() {
               )}
             </dl>
           </div>
-        </div>
+        </motion.div>
       )}
 
       {/* Patient Summary Section */}
-      <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-        <div className="px-4 py-5 sm:px-6 bg-indigo-50">
-          <h3 className="text-lg leading-6 font-medium text-gray-900">
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.2 }}
+        className="bg-white shadow-md rounded-lg overflow-hidden border border-gray-200"
+      >
+        <div className="px-4 py-5 sm:px-6 bg-gradient-to-r from-indigo-50 to-purple-50">
+          <h3 className="text-lg leading-6 font-medium text-gray-900 flex items-center">
+            <FileText className="h-5 w-5 mr-2 text-indigo-500" />
             AI-Generated Patient Summary
           </h3>
           <p className="mt-1 max-w-2xl text-sm text-gray-500">
@@ -207,40 +258,53 @@ export default function AppointmentDetails() {
           <div>
             <dl>
               <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">Patient Name</dt>
-                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                <dt className="text-sm font-medium text-gray-500 flex items-center">
+                  <User className="h-4 w-4 mr-1 text-gray-400" />
+                  Patient Name
+                </dt>
+                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2 font-medium">
                   {patientSummary.patientName}
                 </dd>
               </div>
               
               <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">Symptoms</dt>
+                <dt className="text-sm font-medium text-gray-500 flex items-center">
+                  <Activity className="h-4 w-4 mr-1 text-gray-400" />
+                  Symptoms
+                </dt>
                 <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                  <ul className="border border-gray-200 rounded-md divide-y divide-gray-200">
+                  <ul className="border border-gray-200 rounded-md divide-y divide-gray-200 overflow-hidden shadow-sm">
                     {patientSummary.symptoms.map((symptom, index) => (
-                      <li key={index} className="pl-3 pr-4 py-3 flex items-center justify-start text-sm">
-                        <svg className="flex-shrink-0 h-5 w-5 text-orange-500 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 013-1h6a1 1 0 011 1v9a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 013-1h7z" clipRule="evenodd" />
-                        </svg>
+                      <motion.li 
+                        key={index} 
+                        initial={{ opacity: 0, x: -5 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.3, delay: 0.1 + index * 0.05 }}
+                        className="pl-3 pr-4 py-3 flex items-center justify-start text-sm bg-white hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex-shrink-0 h-5 w-5 text-orange-500 mr-2">
+                          <Activity className="h-5 w-5" />
+                        </div>
                         <span className="ml-2 flex-1 w-0 truncate capitalize">{symptom}</span>
-                      </li>
+                      </motion.li>
                     ))}
                   </ul>
                 </dd>
               </div>
               
               <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">Possible Diagnosis</dt>
+                <dt className="text-sm font-medium text-gray-500 flex items-center">
+                  <Clipboard className="h-4 w-4 mr-1 text-gray-400" />
+                  Possible Diagnosis
+                </dt>
                 <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                  <div className="p-4 bg-yellow-50 rounded-md">
+                  <div className="p-4 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-md border border-yellow-200 shadow-sm">
                     <div className="flex">
                       <div className="flex-shrink-0">
-                        <svg className="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                        </svg>
+                        <AlertCircle className="h-5 w-5 text-yellow-500" />
                       </div>
                       <div className="ml-3">
-                        <p className="text-sm text-yellow-700">{patientSummary.possibleDiagnosis}</p>
+                        <p className="text-sm text-yellow-700 font-medium">{patientSummary.possibleDiagnosis}</p>
                       </div>
                     </div>
                   </div>
@@ -248,32 +312,37 @@ export default function AppointmentDetails() {
               </div>
               
               <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">Additional Notes</dt>
+                <dt className="text-sm font-medium text-gray-500 flex items-center">
+                  <MessageSquare className="h-4 w-4 mr-1 text-gray-400" />
+                  Additional Notes
+                </dt>
                 <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                   <p className="italic">{patientSummary.additionalNotes}</p>
                 </dd>
               </div>
             </dl>
             
-            <div className="px-4 py-5 sm:px-6 bg-gray-50 border-t border-gray-200">
+            <div className="px-4 py-5 sm:px-6 bg-gradient-to-r from-gray-50 to-gray-100 border-t border-gray-200">
               <div className="flex justify-end space-x-3">
                 <button
                   type="button"
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
                 >
+                  <Clipboard className="mr-1.5 h-4 w-4" />
                   Add Notes
                 </button>
                 <button
                   type="button"
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-gradient-to-r from-primary-600 to-secondary-600 hover:from-primary-700 hover:to-secondary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-all"
                 >
+                  <MessageSquare className="mr-1.5 h-4 w-4" />
                   Start Consultation
                 </button>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
