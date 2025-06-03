@@ -71,10 +71,10 @@ export default function Register() {
     onSubmit: async (values) => {
       setFormError(null);
       try {
-        const { confirmPassword, ...userData } = values;
+        const { confirmPassword: _, ...userData } = values;
         console.log('Register data being sent:', userData);
         await register(userData);
-        navigate('/');
+        navigate('/dashboard');
       } catch (err: any) {
         setFormError(err.message);
       }
